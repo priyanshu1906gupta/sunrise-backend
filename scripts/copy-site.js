@@ -7,8 +7,7 @@ function findMonorepoRoot() {
     let current = path.resolve(start);
     for (let i = 0; i < 6; i++) {
       if (
-        fs.existsSync(path.join(current, "sunrise-frontend", "package.json")) ||
-        fs.existsSync(path.join(current, "fitness-freaks-landing", "index.html"))
+        fs.existsSync(path.join(current, "sunrise-frontend", "package.json"))
       ) {
         return current;
       }

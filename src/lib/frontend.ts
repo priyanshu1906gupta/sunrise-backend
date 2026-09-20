@@ -20,11 +20,9 @@ function extraFolders(root: string): string[] {
     root,
     path.join(root, "public"),
     path.join(root, "dist", "public"),
-    path.join(root, "fitness-freak-backend", "public"),
-    path.join(root, "fitness-freak-backend", "dist", "public"),
     path.join(root, "browser"),
     path.join(root, "dist", "coreui-free-angular-admin-template", "browser"),
-    path.join(root, "fitness-freaks-frontend", "dist", "coreui-free-angular-admin-template", "browser"),
+    path.join(root, "sunrise-frontend", "dist", "coreui-free-angular-admin-template", "browser"),
   ];
 }
 
@@ -36,7 +34,6 @@ export function frontendSearchPaths(): string[] {
     path.join(__dirname, "../../public"),
     path.join(__dirname, "../public"),
     path.join(process.cwd(), "public"),
-    path.join(process.cwd(), "fitness-freak-backend", "public"),
   ].filter((dir): dir is string => Boolean(dir));
   for (const root of roots) {
     paths.push(...extraFolders(root));

@@ -95,7 +95,7 @@ function smtpTransportOptions(hop: SmtpHop): SMTPTransport.Options {
 function mailFrom(): string {
   const user = env.SMTP_USER.trim();
   const from = stripQuotes(env.SMTP_FROM);
-  if (!from || from.includes("fitness-freaks.local")) return user;
+  if (!from || from.includes("sunrise.local")) return user;
   if (from.toLowerCase().includes(user.toLowerCase())) return from;
   return user;
 }
