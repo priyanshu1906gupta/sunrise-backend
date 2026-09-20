@@ -2,17 +2,10 @@ const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
-const { copySite, hasAngularBuild, ANGULAR_SRC, REPO_ROOT, BACKEND_ROOT } = require("./copy-site.js");
+const { copySite, hasAngularBuild, hasHostedApp, ANGULAR_SRC, REPO_ROOT, BACKEND_ROOT } = require("./copy-site.js");
 
-const backendRoot = BACKEND_ROOT;
-const repoRoot = REPO_ROOT;
-const frontendRoot = path.join(repoRoot, "sunrise-frontend");
-
-const dests = [
-  path.join(backendRoot, "public"),
-  path.join(backendRoot, "dist", "public"),
-  path.join(repoRoot, "public"),
-];
+const frontendRoot = path.join(REPO_ROOT, "sunrise-frontend");
+const dests = [path.join(BACKEND_ROOT, "public"), path.join(BACKEND_ROOT, "dist", "public")];
 
 function copyAll(requireAngular) {
   for (const dest of dests) {
@@ -27,12 +20,12 @@ if (hasAngularBuild(ANGULAR_SRC)) {
 }
 
 if (!fs.existsSync(path.join(frontendRoot, "package.json"))) {
-  console.warn("Frontend folder not found next to the API. Copying landing only.");
-  try {
+  if (hasHostedApp()) {
+    console.log("Using committed public/app for GoDaddy (Angular source not on this host).");
     copyAll(false);
-  } catch (error) {
-    console.warn(error);
+    process.exit(0);
   }
+  console.warn("Frontend folder not found and public/app is missing.");
   process.exit(0);
 }
 
@@ -41,24 +34,18 @@ try {
   execSync("npm install --include=dev", { cwd: frontendRoot, stdio: "inherit" });
   execSync("npm run build", { cwd: frontendRoot, stdio: "inherit" });
 } catch (error) {
-  console.error("Angular build failed. Use Node 20+ or 22 on the host, or build the frontend locally.");
+  console.error("Angular build failed. Use Node 20+ locally, then commit public/app for GoDaddy.");
   console.error(error);
-  try {
+  if (hasHostedApp()) {
     copyAll(false);
-  } catch (copyError) {
-    console.warn(copyError);
+    process.exit(0);
   }
-  process.exit(0);
+  process.exit(1);
 }
 
 if (!hasAngularBuild(ANGULAR_SRC)) {
   console.error("Angular build ran but index.html was not found at", ANGULAR_SRC);
-  try {
-    copyAll(false);
-  } catch (copyError) {
-    console.warn(copyError);
-  }
-  process.exit(0);
+  process.exit(1);
 }
 
 copyAll(true);

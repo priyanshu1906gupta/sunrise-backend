@@ -1,0 +1,1 @@
+import{fn as cE,m as C}from"./chunk-B0h2JQjb.js";import{r as f}from"./chunk-Bvt7Q3t4.js";var a=class i{constructor(){this.i18n=C(f)}transform(t){return this.i18n.lang(),this.i18n.dict(),this.i18n.t(t)}static{this.ɵfac=function(s){return new(s||i)}}static{this.ɵpipe=cE({name:`t`,type:i,pure:!1})}};export{a as t};

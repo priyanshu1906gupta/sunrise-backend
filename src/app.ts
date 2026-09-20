@@ -48,6 +48,16 @@ if (frontendDist) {
   app.use(express.static(frontendDist));
   const spaIndex = path.join(frontendDist, "app", "index.html");
   const landing404 = path.join(frontendDist, "404.html");
+  const hasSpa = fs.existsSync(spaIndex);
+  const hasMarketingLanding =
+    fs.existsSync(path.join(frontendDist, "features.html")) || fs.existsSync(path.join(frontendDist, "robots.txt"));
+  app.get("/", (req, res, next) => {
+    if (hasSpa && !hasMarketingLanding) {
+      res.redirect(302, "/app/");
+      return;
+    }
+    next();
+  });
   app.get(/^\/app(?:\/.*)?$/, (req, res, next) => {
     if (req.method !== "GET" && req.method !== "HEAD") {
       next();

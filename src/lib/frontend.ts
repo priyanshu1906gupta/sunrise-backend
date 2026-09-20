@@ -52,6 +52,10 @@ function isLandingRoot(dir: string): boolean {
   );
 }
 
+function isHostedSite(dir: string): boolean {
+  return fs.existsSync(path.join(dir, "app", INDEX));
+}
+
 export function resolveFrontendDist(): string | null {
   const candidates: string[] = [];
   for (const dir of frontendSearchPaths()) {
@@ -61,5 +65,5 @@ export function resolveFrontendDist(): string | null {
       /* ignore */
     }
   }
-  return candidates.find(isLandingRoot) || candidates[0] || null;
+  return candidates.find(isLandingRoot) || candidates.find(isHostedSite) || candidates[0] || null;
 }
