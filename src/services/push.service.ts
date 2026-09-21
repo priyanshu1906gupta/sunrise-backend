@@ -17,7 +17,7 @@ export class PushService {
     return { unregistered: true };
   }
 
-  async notifyUser(userId: string, title: string, body: string) {
+  async notifyUser(userId: string, title: string, body: string, data?: Record<string, string>) {
     const tokens = await prisma.deviceToken.findMany({ where: { userId } });
     if (!tokens.length) return { sent: 0 };
     const key = process.env.FCM_SERVER_KEY;
@@ -29,6 +29,7 @@ export class PushService {
         body: JSON.stringify({
           registration_ids: tokens.map((row) => row.token),
           notification: { title, body },
+          ...(data ? { data } : {}),
         }),
       });
       return { sent: tokens.length };

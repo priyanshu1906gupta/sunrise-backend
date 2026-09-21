@@ -36,10 +36,12 @@ import {
   createTestSchema,
   testHeartbeatSchema,
   testSubmitSchema,
+  startLiveSchema,
 } from "../validators/domain.validator";
 import { AppError } from "../middleware/errorHandler";
 import { hrmService } from "../services/hrm.service";
 import { testService } from "../services/test.service";
+import { liveService } from "../services/live.service";
 
 export class FileController {
   async upload(req: Request, res: Response, next: NextFunction) {
@@ -698,6 +700,44 @@ export class TestController {
     try {
       const { id } = idParamSchema.parse(req.params);
       sendSuccess(res, await testService.review(requireUser(req), id), "Review fetched");
+    } catch (error) {
+      next(error);
+    }
+  }
+}
+
+export class LiveController {
+  async catalog(req: Request, res: Response, next: NextFunction) {
+    try {
+      const branchId = typeof req.query.branchId === "string" ? req.query.branchId : undefined;
+      sendSuccess(res, await liveService.catalog(requireUser(req), branchId), "Live catalog fetched");
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async start(req: Request, res: Response, next: NextFunction) {
+    try {
+      const data = startLiveSchema.parse(req.body);
+      sendCreated(res, await liveService.start(requireUser(req), data), "Live class started");
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async end(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = idParamSchema.parse(req.params);
+      sendSuccess(res, await liveService.end(requireUser(req), id), "Live class ended");
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async join(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = idParamSchema.parse(req.params);
+      sendSuccess(res, await liveService.join(requireUser(req), id), "Live class fetched");
     } catch (error) {
       next(error);
     }

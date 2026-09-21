@@ -45,6 +45,12 @@ enum NotificationType {
   STUDENT_PAYMENT
   EMPLOYEE_SALARY
   EXPENSE
+  LIVE_CLASS
+}
+
+enum LiveSessionStatus {
+  LIVE
+  ENDED
 }
 
 enum AttendanceStatus {
@@ -135,9 +141,10 @@ model Branch {
   students  Student[]
   employees Employee[]
   expenses  Expense[]
-  courses   Course[]
-  batches   Batch[]
-  tests     Test[]
+  courses      Course[]
+  batches      Batch[]
+  tests        Test[]
+  liveSessions LiveSession[]
 
   @@index([companyId])
   @@map("branches")
@@ -176,7 +183,8 @@ model User {
   student       Student?
   refreshTokens RefreshToken[]
   deviceTokens  DeviceToken[]
-  testsCreated  Test[]         @relation("TestsCreated")
+  testsCreated          Test[]         @relation("TestsCreated")
+  liveSessionsStarted   LiveSession[]  @relation("LiveSessionsStarted")
 
   @@index([companyId])
   @@map("users")
@@ -233,9 +241,10 @@ model Subject {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  company   Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  courses   CourseSubject[]
-  employees Employee[]
+  company      Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  courses      CourseSubject[]
+  employees    Employee[]
+  liveSessions LiveSession[]
 
   @@unique([companyId, name])
   @@map("subjects")
@@ -293,8 +302,9 @@ model Course {
   branch   Branch          @relation(fields: [branchId], references: [id], onDelete: Cascade)
   subjects CourseSubject[]
   batches  Batch[]
-  students StudentCourse[]
-  tests    Test[]
+  students     StudentCourse[]
+  tests        Test[]
+  liveSessions LiveSession[]
 
   @@index([branchId])
   @@index([deletedAt])
@@ -552,6 +562,27 @@ model AppContent {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("app_contents")
+}
+
+model LiveSession {
+  id          String            @id @default(uuid())
+  branchId    String            @map("branch_id")
+  courseId    String            @map("course_id")
+  subjectId   String            @map("subject_id")
+  startedById String            @map("started_by_id")
+  status      LiveSessionStatus
+  jitsiRoom   String            @unique @map("jitsi_room")
+  startedAt   DateTime          @default(now()) @map("started_at")
+  endedAt     DateTime?         @map("ended_at")
+
+  branch    Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  course    Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  startedBy User    @relation("LiveSessionsStarted", fields: [startedById], references: [id], onDelete: Restrict)
+
+  @@index([branchId, status])
+  @@index([courseId, subjectId, status])
+  @@map("live_sessions")
 }
 
 model Test {

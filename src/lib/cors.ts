@@ -5,15 +5,17 @@ function configuredOrigins(): string[] {
   return env.CORS_ORIGIN.split(",").map((value) => value.trim()).filter(Boolean);
 }
 
-export function corsOptions(): CorsOptions {
-  if (env.NODE_ENV !== "production") {
-    return { origin: true, credentials: true };
-  }
-
+export function isOriginAllowed(origin?: string | null): boolean {
+  if (env.NODE_ENV !== "production") return true;
+  if (!origin) return true;
   const allowed = configuredOrigins();
+  return allowed.includes("*") || allowed.includes(origin);
+}
+
+export function corsOptions(): CorsOptions {
   return {
     origin(origin, callback) {
-      if (!origin || allowed.includes("*") || allowed.includes(origin)) {
+      if (isOriginAllowed(origin)) {
         callback(null, true);
         return;
       }

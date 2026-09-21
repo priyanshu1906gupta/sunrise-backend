@@ -218,3 +218,9 @@ export const testSubmitSchema = z.object({
   auto: z.boolean().optional().default(false),
   answers: z.array(testAnswerSchema).optional(),
 });
+
+export const startLiveSchema = z.object({
+  branchId: z.string().uuid().optional(),
+  courseId: z.string().uuid(),
+  subjectId: z.string().uuid(),
+});

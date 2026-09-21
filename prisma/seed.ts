@@ -13,6 +13,7 @@ async function main() {
   console.log("Seeding Sunrise Coaching Khargone...");
 
   await prisma.notification.deleteMany();
+  await prisma.liveSession.deleteMany();
   await prisma.testAttempt.deleteMany();
   await prisma.testQuestion.deleteMany();
   await prisma.test.deleteMany();

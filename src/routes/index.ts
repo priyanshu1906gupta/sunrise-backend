@@ -14,6 +14,7 @@ import {
   LeaveController,
   PushController,
   TestController,
+  LiveController,
 } from "../controllers/domain.controller";
 import { authenticate, authorize, authorizeWrite } from "../middleware/auth";
 import { healthCheck } from "../utils/response";
@@ -41,6 +42,7 @@ const leaves = new LeaveController();
 const push = new PushController();
 const subscriptions = new SubscriptionController();
 const tests = new TestController();
+const live = new LiveController();
 
 router.get("/health", healthCheck);
 router.get("/health/db", async (_req, res) => {
@@ -160,6 +162,15 @@ router.get("/tests/:id", authenticate, authorize("ADMIN", "MANAGER", "TEACHER"),
 router.delete("/tests/:id", authenticate, authorize("ADMIN", "MANAGER", "TEACHER"), (req, res, next) =>
   tests.remove(req, res, next),
 );
+
+router.get("/live/catalog", authenticate, (req, res, next) => live.catalog(req, res, next));
+router.post("/live/start", authenticate, authorize("ADMIN", "MANAGER", "TEACHER"), (req, res, next) =>
+  live.start(req, res, next),
+);
+router.post("/live/:id/end", authenticate, authorize("ADMIN", "MANAGER", "TEACHER"), (req, res, next) =>
+  live.end(req, res, next),
+);
+router.get("/live/:id", authenticate, (req, res, next) => live.join(req, res, next));
 
 router.get("/dashboard", authenticate, (req, res, next) => dashboard.stats(req, res, next));
 router.get("/calendar", authenticate, (req, res, next) => dashboard.calendar(req, res, next));

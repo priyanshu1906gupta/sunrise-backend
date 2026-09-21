@@ -1,4 +1,5 @@
 import "./config/load-env";
+import http from "http";
 import type { Express } from "express";
 import app from "./app";
 import { env, envErrors } from "./config/env";
@@ -7,25 +8,28 @@ import { prisma } from "./lib/prisma";
 import { UPLOAD_PUBLIC_PATH, UPLOAD_ROOT } from "./lib/files";
 import { syncPrismaSchema } from "./lib/sync-schema";
 import { databaseUrlLooksUsable } from "./lib/prisma-errors";
+import { attachLiveSocket } from "./lib/live-socket";
 
 declare const PhusionPassenger: { configure: (opts: { autoInstall: boolean }) => void } | undefined;
 
 function listen(expressApp: Express): Promise<void> {
   const port = Number(process.env.PORT) || env.PORT || 3000;
+  const httpServer = http.createServer(expressApp);
+  attachLiveSocket(httpServer);
+
   return new Promise((resolve, reject) => {
     const onError = (error: Error) => reject(error);
 
     if (typeof PhusionPassenger !== "undefined") {
       PhusionPassenger.configure({ autoInstall: false });
-      const server = (expressApp.listen as (bind: string, cb: () => void) => { on: (ev: string, fn: (err: Error) => void) => void })(
-        "passenger",
-        () => resolve(),
-      );
+      const server = (
+        httpServer.listen as (bind: string, cb: () => void) => { on: (ev: string, fn: (err: Error) => void) => void }
+      )("passenger", () => resolve());
       server.on("error", onError);
       return;
     }
 
-    const server = expressApp.listen(port, "0.0.0.0", () => {
+    httpServer.listen(port, "0.0.0.0", () => {
       console.log(`Server running on port ${port}`);
       console.log(
         `Uploads: ${UPLOAD_ROOT} (public ${env.IMAGE_BASE_URL || `http://localhost:${port}${UPLOAD_PUBLIC_PATH}`})`,
@@ -37,7 +41,7 @@ function listen(expressApp: Express): Promise<void> {
       }
       resolve();
     });
-    server.on("error", onError);
+    httpServer.on("error", onError);
   });
 }
 

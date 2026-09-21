@@ -42,6 +42,10 @@ const envSchema = z.object({
   IMAGE_BASE_URL: z.string().optional().default(""),
   UPLOAD_URL_PATH: z.string().default("/assets"),
   SUPER_ADMIN_KEY: z.string().min(16).default("884420a297efd8d34a110511522db63efce6ab4a"),
+  JITSI_DOMAIN: z.preprocess((value) => {
+    const trimmed = stripEnvQuotes(value);
+    return trimmed || undefined;
+  }, z.string().default("meet.jit.si")),
 });
 
 const parsed = envSchema.safeParse(process.env);

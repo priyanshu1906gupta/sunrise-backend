@@ -298,7 +298,7 @@ export class NotificationService {
   /** Drop past-due rows. Keep unmarked rows that are still in the due window so sync does not recreate them as unread. */
   private async purge(userId: string) {
     await prisma.notification.deleteMany({
-      where: { userId, dueDate: { lt: startOfDay(new Date()) } },
+      where: { userId, dueDate: { lt: startOfDay(new Date()) }, type: { not: "LIVE_CLASS" } },
     });
   }
 
