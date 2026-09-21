@@ -33,9 +33,13 @@ import {
   subjectSchema,
   leaveSchema,
   pushTokenSchema,
+  createTestSchema,
+  testHeartbeatSchema,
+  testSubmitSchema,
 } from "../validators/domain.validator";
 import { AppError } from "../middleware/errorHandler";
 import { hrmService } from "../services/hrm.service";
+import { testService } from "../services/test.service";
 
 export class FileController {
   async upload(req: Request, res: Response, next: NextFunction) {
@@ -561,6 +565,139 @@ export class HrmController {
     try {
       const data = hrmSettingsSchema.parse(req.body);
       sendSuccess(res, await hrmService.setSundayWeekend(requireUser(req), data.sundayWeekend), "HRM settings saved");
+    } catch (error) {
+      next(error);
+    }
+  }
+}
+
+export class TestController {
+  async list(req: Request, res: Response, next: NextFunction) {
+    try {
+      const branchId = typeof req.query.branchId === "string" ? req.query.branchId : undefined;
+      const courseId = typeof req.query.courseId === "string" ? req.query.courseId : undefined;
+      sendSuccess(res, await testService.list(requireUser(req), { branchId, courseId }), "Tests fetched");
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async available(req: Request, res: Response, next: NextFunction) {
+    try {
+      sendSuccess(res, await testService.available(requireUser(req)), "Tests fetched");
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async sample(req: Request, res: Response, next: NextFunction) {
+    try {
+      const buffer = await testService.sampleExcel();
+      const bytes = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+      res.status(200);
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", 'attachment; filename="test-questions-sample.xlsx"');
+      res.setHeader("Content-Length", String(bytes.length));
+      res.end(bytes);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async create(req: Request, res: Response, next: NextFunction) {
+    try {
+      const data = createTestSchema.parse(req.body);
+      sendCreated(res, await testService.create(requireUser(req), data), "Test created");
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async get(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = idParamSchema.parse(req.params);
+      sendSuccess(res, await testService.get(requireUser(req), id), "Test fetched");
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async remove(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = idParamSchema.parse(req.params);
+      sendSuccess(res, await testService.remove(requireUser(req), id), "Test deleted");
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async start(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = idParamSchema.parse(req.params);
+      sendSuccess(res, await testService.start(requireUser(req), id), "Test started");
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async heartbeat(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = idParamSchema.parse(req.params);
+      const data = testHeartbeatSchema.parse(req.body);
+      sendSuccess(
+        res,
+        await testService.heartbeat(requireUser(req), id, {
+          remainingSeconds: data.remainingSeconds,
+          warningCount: data.warningCount,
+          answers: data.answers?.map((a) => ({
+            questionId: a.questionId,
+            selectedIndex: a.selectedIndex ?? null,
+            markedForReview: a.markedForReview,
+            secondsSpent: a.secondsSpent,
+          })),
+        }),
+        "Saved",
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async submit(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = idParamSchema.parse(req.params);
+      const data = testSubmitSchema.parse(req.body);
+      sendSuccess(
+        res,
+        await testService.submit(requireUser(req), id, {
+          auto: data.auto,
+          answers: data.answers?.map((a) => ({
+            questionId: a.questionId,
+            selectedIndex: a.selectedIndex ?? null,
+            markedForReview: a.markedForReview,
+            secondsSpent: a.secondsSpent,
+          })),
+        }),
+        "Test submitted",
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async result(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = idParamSchema.parse(req.params);
+      sendSuccess(res, await testService.result(requireUser(req), id), "Result fetched");
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async review(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = idParamSchema.parse(req.params);
+      sendSuccess(res, await testService.review(requireUser(req), id), "Review fetched");
     } catch (error) {
       next(error);
     }

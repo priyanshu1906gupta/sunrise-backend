@@ -1,1 +1,0 @@
-import{L as Ie,an as ag,m as C,vr as sn}from"./chunk-B0h2JQjb.js";import{f as ae,l as W,v as he}from"./chunk-_wZCfmu0.js";import{Q as ze}from"./main-J4LPLIWM.js";function y(f){let o=C(he),u=C(ae),d=C(Ie),r=`\0`;ag(o.paramMap,u.events.pipe(sn(t=>t instanceof W))).pipe(ze(d)).subscribe(()=>{let t=o.snapshot.paramMap.get(`branchId`)??``;t!==r&&(r=t,f())})}export{y as t};

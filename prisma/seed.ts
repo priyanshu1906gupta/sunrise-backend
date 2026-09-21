@@ -13,6 +13,9 @@ async function main() {
   console.log("Seeding Sunrise Coaching Khargone...");
 
   await prisma.notification.deleteMany();
+  await prisma.testAttempt.deleteMany();
+  await prisma.testQuestion.deleteMany();
+  await prisma.test.deleteMany();
   await prisma.studentPayment.deleteMany();
   await prisma.studentCourse.deleteMany();
   await prisma.studentBatch.deleteMany();
@@ -340,6 +343,108 @@ You are responsible for the accuracy of data entered for your branches. Photos u
         phone: "7898356505",
       },
     ],
+  });
+
+  await prisma.test.create({
+    data: {
+      name: "PAT Sample Test 2026",
+      courseId: pat.id,
+      branchId: khargone.id,
+      durationMinutes: 20,
+      questionCount: 6,
+      totalMarks: 6,
+      negativeEnabled: true,
+      negativeFraction: "HALF",
+      createdById: teacherUser.id,
+      questions: {
+        create: [
+          {
+            sortOrder: 1,
+            subjectName: "Biology",
+            questionEn: "Mitochondria are known as the:",
+            questionHi: "माइटोकॉन्ड्रिया को जाना जाता है:",
+            correctIndex: 1,
+            answerDescription: "Mitochondria produce ATP, so they are called the powerhouse of the cell.",
+            options: [
+              { en: "Powerhouse of the cell", hi: "कोशिका का पावरहाउस" },
+              { en: "Brain of the cell", hi: "कोशिका का मस्तिष्क" },
+              { en: "Kitchen of the cell", hi: "कोशिका का रसोईघर" },
+              { en: "Packaging centre", hi: "पैकेजिंग केंद्र" },
+            ],
+          },
+          {
+            sortOrder: 2,
+            subjectName: "Biology",
+            questionEn: "Which pigment is responsible for green colour in plants?",
+            questionHi: "पौधों में हरे रंग के लिए कौन सा वर्णक जिम्मेदार है?",
+            correctIndex: 2,
+            answerDescription: "Chlorophyll absorbs light for photosynthesis and gives plants their green colour.",
+            options: [
+              { en: "Carotene", hi: "कैरोटीन" },
+              { en: "Chlorophyll", hi: "क्लोरोफिल" },
+              { en: "Xanthophyll", hi: "जैन्थोफिल" },
+              { en: "Anthocyanin", hi: "एंथोसायनिन" },
+            ],
+          },
+          {
+            sortOrder: 3,
+            subjectName: "Chemistry",
+            questionEn: "The atomic number of carbon is:",
+            questionHi: "कार्बन की परमाणु संख्या है:",
+            correctIndex: 3,
+            answerDescription: "Carbon has 6 protons, so its atomic number is 6.",
+            options: [
+              { en: "4", hi: "4" },
+              { en: "8", hi: "8" },
+              { en: "6", hi: "6" },
+              { en: "12", hi: "12" },
+            ],
+          },
+          {
+            sortOrder: 4,
+            subjectName: "Chemistry",
+            questionEn: "pH of a neutral solution at 25°C is:",
+            questionHi: "25°C पर उदासीन विलयन का pH है:",
+            correctIndex: 1,
+            answerDescription: "A neutral aqueous solution has pH 7 at 25°C.",
+            options: [
+              { en: "7", hi: "7" },
+              { en: "0", hi: "0" },
+              { en: "14", hi: "14" },
+              { en: "1", hi: "1" },
+            ],
+          },
+          {
+            sortOrder: 5,
+            subjectName: "Physics",
+            questionEn: "The SI unit of force is:",
+            questionHi: "बल की एसआई इकाई है:",
+            correctIndex: 2,
+            answerDescription: "Force is measured in newton (N) in the SI system.",
+            options: [
+              { en: "Joule", hi: "जूल" },
+              { en: "Newton", hi: "न्यूटन" },
+              { en: "Watt", hi: "वाट" },
+              { en: "Pascal", hi: "पास्कल" },
+            ],
+          },
+          {
+            sortOrder: 6,
+            subjectName: "Physics",
+            questionEn: "Acceleration due to gravity on Earth is approximately:",
+            questionHi: "पृथ्वी पर गुरुत्वीय त्वरण लगभग है:",
+            correctIndex: 4,
+            answerDescription: "Standard value of g is 9.8 m/s².",
+            options: [
+              { en: "8.9 m/s²", hi: "8.9 मी/से²" },
+              { en: "10.8 m/s²", hi: "10.8 मी/से²" },
+              { en: "6.67 m/s²", hi: "6.67 मी/से²" },
+              { en: "9.8 m/s²", hi: "9.8 मी/से²" },
+            ],
+          },
+        ],
+      },
+    },
   });
 
   console.log("Seed complete.");

@@ -169,3 +169,52 @@ export const hrmAttendanceSchema = z.object({
 export const hrmSettingsSchema = z.object({
   sundayWeekend: z.boolean(),
 });
+
+const questionOptionSchema = z.object({
+  en: z.string().max(2000).default(""),
+  hi: z.string().max(2000).default(""),
+});
+
+export const createTestSchema = z.object({
+  name: z.string().min(1).max(200),
+  courseId: z.string().uuid(),
+  durationMinutes: z.coerce.number().int().min(1).max(600),
+  questionCount: z.coerce.number().int().min(1).max(500).optional(),
+  negativeEnabled: z.boolean().default(false),
+  negativeFraction: z.enum(["HALF", "THIRD", "FOURTH"]).optional().nullable(),
+  branchId: z.string().uuid().optional(),
+  questions: z
+    .array(
+      z.object({
+        subjectName: z.string().min(1).max(120),
+        questionEn: z.string().max(8000).default(""),
+        questionHi: z.string().max(8000).default(""),
+        correctIndex: z.coerce.number().int().min(1).max(6),
+        answerDescription: z.string().max(8000).default(""),
+        options: z.array(questionOptionSchema).min(2).max(6),
+      }),
+    )
+    .min(1)
+    .max(500),
+});
+
+export const testAnswerSchema = z.object({
+  questionId: z.string().uuid(),
+  selectedIndex: z
+    .union([z.null(), z.literal(""), z.coerce.number().int().min(1).max(6)])
+    .optional()
+    .transform((value) => (value === "" || value == null ? null : value)),
+  markedForReview: z.boolean().optional().default(false),
+  secondsSpent: z.coerce.number().min(0).optional().default(0),
+});
+
+export const testHeartbeatSchema = z.object({
+  remainingSeconds: z.coerce.number().int().min(0).optional(),
+  warningCount: z.coerce.number().int().min(0).max(10).optional(),
+  answers: z.array(testAnswerSchema).optional(),
+});
+
+export const testSubmitSchema = z.object({
+  auto: z.boolean().optional().default(false),
+  answers: z.array(testAnswerSchema).optional(),
+});

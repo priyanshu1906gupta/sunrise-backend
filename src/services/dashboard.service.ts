@@ -59,9 +59,21 @@ export class DashboardService {
     const income = payments.reduce((s, p) => s + toNumber(p.amount), 0);
     const expenseTotal = expenses.reduce((s, e) => s + toNumber(e.amount), 0);
 
-    const [paidStudents, unpaidStudents] = await Promise.all([
+    const studentRow =
+      user.role === "STUDENT"
+        ? await prisma.student.findFirst({ where: { userId: user.id, ...ALIVE }, select: { id: true } })
+        : null;
+    const [paidStudents, unpaidStudents, testsAdded, testsGiven] = await Promise.all([
       prisma.student.count({ where: { branchId: { in: ids }, status: "ACTIVE", paymentStatus: "PAID", ...ALIVE } }),
       prisma.student.count({ where: { branchId: { in: ids }, status: "ACTIVE", paymentStatus: "UNPAID", ...ALIVE } }),
+      prisma.test.count({ where: { branchId: { in: ids }, ...ALIVE } }),
+      studentRow
+        ? prisma.testAttempt.count({
+            where: { studentId: studentRow.id, status: { in: ["SUBMITTED", "AUTO_SUBMITTED"] } },
+          })
+        : prisma.testAttempt.count({
+            where: { test: { branchId: { in: ids } }, status: { in: ["SUBMITTED", "AUTO_SUBMITTED"] } },
+          }),
     ]);
 
     const branchBreakdown = await Promise.all(
@@ -127,8 +139,8 @@ export class DashboardService {
       branchCount: branches.length,
       paidStudents,
       unpaidStudents,
-      testsAdded: 0,
-      testsGiven: 0,
+      testsAdded,
+      testsGiven,
       branchBreakdown,
     };
   }

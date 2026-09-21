@@ -13,6 +13,7 @@ import {
   AcademicController,
   LeaveController,
   PushController,
+  TestController,
 } from "../controllers/domain.controller";
 import { authenticate, authorize, authorizeWrite } from "../middleware/auth";
 import { healthCheck } from "../utils/response";
@@ -39,6 +40,7 @@ const academic = new AcademicController();
 const leaves = new LeaveController();
 const push = new PushController();
 const subscriptions = new SubscriptionController();
+const tests = new TestController();
 
 router.get("/health", healthCheck);
 router.get("/health/db", async (_req, res) => {
@@ -136,6 +138,28 @@ router.get("/expenses", authenticate, (req, res, next) => expenses.list(req, res
 router.post("/expenses", authenticate, authorizeWrite, (req, res, next) => expenses.create(req, res, next));
 router.put("/expenses/:id", authenticate, authorizeWrite, (req, res, next) => expenses.update(req, res, next));
 router.delete("/expenses/:id", authenticate, authorizeWrite, (req, res, next) => expenses.remove(req, res, next));
+
+router.get("/tests/sample.xlsx", authenticate, authorize("ADMIN", "MANAGER", "TEACHER"), (req, res, next) =>
+  tests.sample(req, res, next),
+);
+router.get("/tests/available", authenticate, authorize("STUDENT"), (req, res, next) => tests.available(req, res, next));
+router.get("/tests", authenticate, authorize("ADMIN", "MANAGER", "TEACHER"), (req, res, next) =>
+  tests.list(req, res, next),
+);
+router.post("/tests", authenticate, authorize("ADMIN", "MANAGER", "TEACHER"), (req, res, next) =>
+  tests.create(req, res, next),
+);
+router.get("/tests/:id/result", authenticate, authorize("STUDENT"), (req, res, next) => tests.result(req, res, next));
+router.get("/tests/:id/review", authenticate, authorize("STUDENT"), (req, res, next) => tests.review(req, res, next));
+router.post("/tests/:id/start", authenticate, authorize("STUDENT"), (req, res, next) => tests.start(req, res, next));
+router.put("/tests/:id/heartbeat", authenticate, authorize("STUDENT"), (req, res, next) => tests.heartbeat(req, res, next));
+router.post("/tests/:id/submit", authenticate, authorize("STUDENT"), (req, res, next) => tests.submit(req, res, next));
+router.get("/tests/:id", authenticate, authorize("ADMIN", "MANAGER", "TEACHER"), (req, res, next) =>
+  tests.get(req, res, next),
+);
+router.delete("/tests/:id", authenticate, authorize("ADMIN", "MANAGER", "TEACHER"), (req, res, next) =>
+  tests.remove(req, res, next),
+);
 
 router.get("/dashboard", authenticate, (req, res, next) => dashboard.stats(req, res, next));
 router.get("/calendar", authenticate, (req, res, next) => dashboard.calendar(req, res, next));
