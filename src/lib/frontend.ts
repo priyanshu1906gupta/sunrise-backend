@@ -69,5 +69,11 @@ export function resolveFrontendDist(): string | null {
       /* ignore */
     }
   }
-  return candidates.find(isLandingRoot) || candidates.find(isHostedSite) || candidates[0] || null;
+  return (
+    candidates.find((dir) => isLandingRoot(dir) && isHostedSite(dir)) ||
+    candidates.find(isLandingRoot) ||
+    candidates.find(isHostedSite) ||
+    candidates[0] ||
+    null
+  );
 }

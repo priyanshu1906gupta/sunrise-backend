@@ -42,6 +42,7 @@ function isAppRedirectHtml(file) {
 
 function resolveLandingSrc(repoRoot) {
   const candidates = [
+    path.join(BACKEND_ROOT, "landing"),
     path.join(repoRoot, "sunrise-landing"),
     path.join(repoRoot, "sunrise-landing page"),
     path.join(BACKEND_ROOT, "public"),
@@ -64,37 +65,24 @@ const ANGULAR_SRC = path.join(
 const PRESERVE_IN_PUBLIC = new Set(["assets", "app", "downloads"]);
 const SKIP_LANDING_NAMES = new Set([".git", "node_modules", ".gitignore"]);
 
-const APP_REDIRECT = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="refresh" content="0;url=/app/">
-  <title>Sunrise Coaching Khargone</title>
-  <script>location.replace("/app/");</script>
-</head>
-<body>
-  <p><a href="/app/">Open Sunrise Coaching Khargone</a></p>
-</body>
-</html>
-`;
-
-function writeAppRedirect(destPublic) {
-  if (isMarketingDir(destPublic)) return;
+function restoreLandingIndex(destPublic) {
   const index = path.join(destPublic, "index.html");
-  if (fs.existsSync(index) && !isAppRedirectHtml(index)) return;
-  fs.mkdirSync(destPublic, { recursive: true });
-  fs.writeFileSync(index, APP_REDIRECT);
+  const srcIndex = LANDING_SRC && path.join(LANDING_SRC, "index.html");
+  if (!srcIndex || !fs.existsSync(srcIndex)) return;
+  if (!fs.existsSync(index) || isAppRedirectHtml(index)) {
+    fs.mkdirSync(destPublic, { recursive: true });
+    fs.copyFileSync(srcIndex, index);
+  }
 }
 
 function copyLanding(destPublic) {
   const src = LANDING_SRC && fs.existsSync(path.join(LANDING_SRC, "index.html")) ? LANDING_SRC : null;
   if (!src) {
-    if (isMarketingDir(destPublic)) return true;
-    writeAppRedirect(destPublic);
-    return false;
+    restoreLandingIndex(destPublic);
+    return isMarketingDir(destPublic);
   }
   if (path.resolve(src) === path.resolve(destPublic)) {
+    restoreLandingIndex(destPublic);
     return true;
   }
   fs.mkdirSync(destPublic, { recursive: true });
@@ -141,7 +129,7 @@ function copySite(destPublic, { angularSrc = ANGULAR_SRC, requireAngular = true 
   }
   const hasApp = hasHostedApp(destPublic);
   console.log(
-    (copiedLanding ? "Copied landing" : "Root redirects to /app/") +
+    (copiedLanding ? "Copied landing" : "No marketing landing source found") +
       (hasApp ? " + /app" : "") +
       " to " +
       destPublic,

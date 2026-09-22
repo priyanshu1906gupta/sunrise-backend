@@ -45,38 +45,59 @@ app.use("/api", routes);
 
 if (frontendDist) {
   console.log(`Serving site from ${frontendDist}`);
-  app.use(express.static(frontendDist));
   const spaIndex = path.join(frontendDist, "app", "index.html");
   const landing404 = path.join(frontendDist, "404.html");
-  const hasSpa = fs.existsSync(spaIndex);
   const landingIndex = path.join(frontendDist, "index.html");
+  const bundledLandingDir = path.join(__dirname, "../landing");
+  const bundledLanding = path.join(bundledLandingDir, "index.html");
+  const hasSpa = fs.existsSync(spaIndex);
   const hasMarketingLanding =
     fs.existsSync(path.join(frontendDist, "features.html")) ||
     fs.existsSync(path.join(frontendDist, "robots.txt")) ||
     fs.existsSync(path.join(frontendDist, "about.html")) ||
     fs.existsSync(path.join(frontendDist, "download.html")) ||
     fs.existsSync(path.join(frontendDist, "contact.html"));
-  const indexLooksLikeRedirect = () => {
+  const indexLooksLikeRedirect = (file: string) => {
     try {
-      const html = fs.readFileSync(landingIndex, "utf8");
+      const html = fs.readFileSync(file, "utf8");
       return html.includes('location.replace("/app/")') || html.includes('content="0;url=/app/"');
     } catch {
       return true;
     }
   };
-  app.get("/", (req, res, next) => {
-    if (hasSpa && (!hasMarketingLanding || !fs.existsSync(landingIndex) || indexLooksLikeRedirect())) {
-      res.redirect(302, "/app/");
-      return;
+  if (fs.existsSync(landingIndex) && fs.existsSync(bundledLanding) && indexLooksLikeRedirect(landingIndex)) {
+    try {
+      fs.copyFileSync(bundledLanding, landingIndex);
+      console.log("Restored marketing index.html over /app/ redirect stub");
+    } catch {
+      /* ignore */
     }
-    if (fs.existsSync(landingIndex)) {
-      res.sendFile(landingIndex, (err) => {
+  }
+  app.use(express.static(frontendDist, { index: false }));
+  if (fs.existsSync(bundledLandingDir)) {
+    app.use(express.static(bundledLandingDir, { index: false }));
+  }
+  const realLandingIndex = () => {
+    if (fs.existsSync(landingIndex) && !indexLooksLikeRedirect(landingIndex)) return landingIndex;
+    if (fs.existsSync(bundledLanding) && !indexLooksLikeRedirect(bundledLanding)) return bundledLanding;
+    return null;
+  };
+  const sendHome = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const home = realLandingIndex();
+    if (home) {
+      res.sendFile(home, (err) => {
         if (err) next(err);
       });
       return;
     }
+    if (hasSpa && !hasMarketingLanding) {
+      res.redirect(302, "/app/");
+      return;
+    }
     next();
-  });
+  };
+  app.get("/", sendHome);
+  app.get("/index.html", sendHome);
   app.get(/^\/app(?:\/.*)?$/, (req, res, next) => {
     if (req.method !== "GET" && req.method !== "HEAD") {
       next();

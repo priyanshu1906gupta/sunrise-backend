@@ -1,0 +1,84 @@
+.navbar-brand img {
+  max-height: 56px;
+  width: auto;
+}
+
+.navbar-right {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-left: 8px;
+}
+
+.navbar-right li a.hover-btn-new {
+  padding: 8px 16px;
+  margin: 10px 4px;
+  white-space: nowrap;
+}
+
+.course-item .image-blog img,
+.results-photo img,
+.family-photo img {
+  width: 100%;
+  object-fit: cover;
+}
+
+.course-item .image-blog img {
+  height: 200px;
+}
+
+.map-box iframe {
+  width: 100%;
+  min-height: 380px;
+  border: 0;
+}
+
+.download-card {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 32px 24px;
+  text-align: center;
+  height: 100%;
+  box-shadow: 0 10px 28px rgba(15, 40, 28, 0.07);
+}
+
+.download-card i {
+  font-size: 42px;
+  color: #eea412;
+  margin-bottom: 16px;
+}
+
+.download-card .meta {
+  color: #666;
+  font-size: 14px;
+  min-height: 42px;
+}
+
+.download-card a.disabled,
+.download-card button:disabled {
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+.faq-item {
+  margin-bottom: 18px;
+}
+
+.faq-item h4 {
+  font-size: 18px;
+  margin-bottom: 6px;
+}
+
+.stat_count_text {
+  font-size: 42px;
+  font-weight: 700;
+  margin: 0;
+}
+
+@media (max-width: 991px) {
+  .navbar-right {
+    display: block;
+    margin: 10px 0 16px;
+  }
+}
