@@ -20,12 +20,36 @@ function findMonorepoRoot() {
 const BACKEND_ROOT = path.resolve(__dirname, "..");
 const REPO_ROOT = findMonorepoRoot() || BACKEND_ROOT;
 
-function resolveLandingSrc(repoRoot) {
-  const candidates = [path.join(repoRoot, "sunrise-landing"), path.join(repoRoot, "sunrise-landing page")];
-  for (const dir of candidates) {
-    if (fs.existsSync(path.join(dir, "index.html"))) return dir;
+function isMarketingDir(dir) {
+  if (!dir || !fs.existsSync(path.join(dir, "index.html"))) return false;
+  return (
+    fs.existsSync(path.join(dir, "robots.txt")) ||
+    fs.existsSync(path.join(dir, "about.html")) ||
+    fs.existsSync(path.join(dir, "download.html")) ||
+    fs.existsSync(path.join(dir, "features.html")) ||
+    fs.existsSync(path.join(dir, "contact.html"))
+  );
+}
+
+function isAppRedirectHtml(file) {
+  try {
+    const html = fs.readFileSync(file, "utf8");
+    return html.includes('location.replace("/app/")') || html.includes('content="0;url=/app/"');
+  } catch {
+    return false;
   }
-  return candidates[0];
+}
+
+function resolveLandingSrc(repoRoot) {
+  const candidates = [
+    path.join(repoRoot, "sunrise-landing"),
+    path.join(repoRoot, "sunrise-landing page"),
+    path.join(BACKEND_ROOT, "public"),
+  ];
+  for (const dir of candidates) {
+    if (isMarketingDir(dir)) return dir;
+  }
+  return null;
 }
 
 const LANDING_SRC = resolveLandingSrc(REPO_ROOT);
@@ -56,20 +80,27 @@ const APP_REDIRECT = `<!DOCTYPE html>
 `;
 
 function writeAppRedirect(destPublic) {
-  if (fs.existsSync(path.join(LANDING_SRC, "index.html"))) return;
+  if (isMarketingDir(destPublic)) return;
+  const index = path.join(destPublic, "index.html");
+  if (fs.existsSync(index) && !isAppRedirectHtml(index)) return;
   fs.mkdirSync(destPublic, { recursive: true });
-  fs.writeFileSync(path.join(destPublic, "index.html"), APP_REDIRECT);
+  fs.writeFileSync(index, APP_REDIRECT);
 }
 
 function copyLanding(destPublic) {
-  if (!fs.existsSync(path.join(LANDING_SRC, "index.html"))) {
+  const src = LANDING_SRC && fs.existsSync(path.join(LANDING_SRC, "index.html")) ? LANDING_SRC : null;
+  if (!src) {
+    if (isMarketingDir(destPublic)) return true;
     writeAppRedirect(destPublic);
     return false;
   }
+  if (path.resolve(src) === path.resolve(destPublic)) {
+    return true;
+  }
   fs.mkdirSync(destPublic, { recursive: true });
-  for (const entry of fs.readdirSync(LANDING_SRC, { withFileTypes: true })) {
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
     if (PRESERVE_IN_PUBLIC.has(entry.name) || SKIP_LANDING_NAMES.has(entry.name)) continue;
-    const from = path.join(LANDING_SRC, entry.name);
+    const from = path.join(src, entry.name);
     const to = path.join(destPublic, entry.name);
     if (entry.isDirectory()) {
       fs.cpSync(from, to, { recursive: true });
@@ -77,7 +108,7 @@ function copyLanding(destPublic) {
       fs.copyFileSync(from, to);
     }
   }
-  const landingNames = new Set(fs.readdirSync(LANDING_SRC));
+  const landingNames = new Set(fs.readdirSync(src));
   for (const name of fs.readdirSync(destPublic)) {
     if (PRESERVE_IN_PUBLIC.has(name) || landingNames.has(name)) continue;
     fs.rmSync(path.join(destPublic, name), { recursive: true, force: true });

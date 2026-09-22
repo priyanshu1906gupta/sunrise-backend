@@ -49,11 +49,30 @@ if (frontendDist) {
   const spaIndex = path.join(frontendDist, "app", "index.html");
   const landing404 = path.join(frontendDist, "404.html");
   const hasSpa = fs.existsSync(spaIndex);
+  const landingIndex = path.join(frontendDist, "index.html");
   const hasMarketingLanding =
-    fs.existsSync(path.join(frontendDist, "features.html")) || fs.existsSync(path.join(frontendDist, "robots.txt"));
+    fs.existsSync(path.join(frontendDist, "features.html")) ||
+    fs.existsSync(path.join(frontendDist, "robots.txt")) ||
+    fs.existsSync(path.join(frontendDist, "about.html")) ||
+    fs.existsSync(path.join(frontendDist, "download.html")) ||
+    fs.existsSync(path.join(frontendDist, "contact.html"));
+  const indexLooksLikeRedirect = () => {
+    try {
+      const html = fs.readFileSync(landingIndex, "utf8");
+      return html.includes('location.replace("/app/")') || html.includes('content="0;url=/app/"');
+    } catch {
+      return true;
+    }
+  };
   app.get("/", (req, res, next) => {
-    if (hasSpa && !hasMarketingLanding) {
+    if (hasSpa && (!hasMarketingLanding || !fs.existsSync(landingIndex) || indexLooksLikeRedirect())) {
       res.redirect(302, "/app/");
+      return;
+    }
+    if (fs.existsSync(landingIndex)) {
+      res.sendFile(landingIndex, (err) => {
+        if (err) next(err);
+      });
       return;
     }
     next();

@@ -9,7 +9,14 @@ export function isOriginAllowed(origin?: string | null): boolean {
   if (env.NODE_ENV !== "production") return true;
   if (!origin) return true;
   const allowed = configuredOrigins();
-  return allowed.includes("*") || allowed.includes(origin);
+  if (allowed.includes("*") || allowed.includes(origin)) return true;
+  try {
+    const host = new URL(origin).hostname;
+    if (host === "localhost" || host === "127.0.0.1") return true;
+  } catch {
+    /* ignore */
+  }
+  return origin.startsWith("capacitor://") || origin.startsWith("ionic://");
 }
 
 export function corsOptions(): CorsOptions {

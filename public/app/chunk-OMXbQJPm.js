@@ -1,0 +1,1 @@
+var i={production:!0,apiUrl:`/api`,pushNotifications:!1};export{i as t};

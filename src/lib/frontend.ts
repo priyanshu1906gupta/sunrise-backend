@@ -46,9 +46,13 @@ function isSiteRoot(dir: string): boolean {
 }
 
 function isLandingRoot(dir: string): boolean {
+  if (!isSiteRoot(dir)) return false;
   return (
-    isSiteRoot(dir) &&
-    (fs.existsSync(path.join(dir, "features.html")) || fs.existsSync(path.join(dir, "robots.txt")))
+    fs.existsSync(path.join(dir, "features.html")) ||
+    fs.existsSync(path.join(dir, "robots.txt")) ||
+    fs.existsSync(path.join(dir, "about.html")) ||
+    fs.existsSync(path.join(dir, "download.html")) ||
+    fs.existsSync(path.join(dir, "contact.html"))
   );
 }
 
