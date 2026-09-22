@@ -250,6 +250,18 @@ export class TestService {
       },
       include: { course: { select: { id: true, name: true } } },
     });
+    const { enrolledStudentUserIds, notifyUsers } = await import("../lib/notify-students");
+    const studentIds = await enrolledStudentUserIds(course.id);
+    await notifyUsers({
+      userIds: studentIds,
+      type: "TEST",
+      title: "New test uploaded",
+      message: `${created.name} · ${created.course.name}`,
+      entityId: created.id,
+      branchId: course.branchId,
+      url: "/tests",
+      data: { testId: created.id },
+    });
     return {
       id: created.id,
       name: created.name,

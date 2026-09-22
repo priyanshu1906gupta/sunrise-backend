@@ -224,3 +224,15 @@ export const startLiveSchema = z.object({
   courseId: z.string().uuid(),
   subjectId: z.string().uuid(),
 });
+
+export const createStudyMaterialSchema = z.object({
+  branchId: z.string().uuid().optional(),
+  courseId: z.string().uuid(),
+  subjectId: z.string().uuid(),
+  name: z.string().min(1).max(200),
+  fileId: z.string().uuid(),
+});
+
+export const loginStatusSchema = z.object({
+  status: z.enum(["ACTIVE", "INACTIVE"]),
+});

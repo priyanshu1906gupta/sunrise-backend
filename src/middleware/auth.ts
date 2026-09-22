@@ -18,6 +18,15 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
     }
     req.user = verifyToken(header.slice(7));
     await assertCompanyCanAccess(req.user.companyId);
+    if (req.user.role === "STUDENT") {
+      const row = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: { sessionEpoch: true },
+      });
+      if (!row || (req.user.sessionEpoch ?? 0) !== row.sessionEpoch) {
+        throw new AppError(401, "Session expired. Please log in again.", "SESSION_EXPIRED");
+      }
+    }
     await assertSessionActive(req.user.id, { touch: countsAsSessionActivity(req) });
     next();
   } catch (error) {

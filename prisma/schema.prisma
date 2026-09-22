@@ -46,6 +46,13 @@ enum NotificationType {
   EMPLOYEE_SALARY
   EXPENSE
   LIVE_CLASS
+  STUDY_MATERIAL
+  TEST
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
 }
 
 enum LiveSessionStatus {
@@ -143,8 +150,9 @@ model Branch {
   expenses  Expense[]
   courses      Course[]
   batches      Batch[]
-  tests        Test[]
-  liveSessions LiveSession[]
+  tests           Test[]
+  liveSessions    LiveSession[]
+  studyMaterials  StudyMaterial[]
 
   @@index([companyId])
   @@map("branches")
@@ -172,6 +180,7 @@ model User {
   role         UserRole
   companyId    String    @map("company_id")
   branchId     String?   @map("branch_id")
+  sessionEpoch Int       @default(0) @map("session_epoch")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
@@ -183,8 +192,9 @@ model User {
   student       Student?
   refreshTokens RefreshToken[]
   deviceTokens  DeviceToken[]
-  testsCreated          Test[]         @relation("TestsCreated")
-  liveSessionsStarted   LiveSession[]  @relation("LiveSessionsStarted")
+  testsCreated          Test[]          @relation("TestsCreated")
+  liveSessionsStarted   LiveSession[]   @relation("LiveSessionsStarted")
+  studyMaterialsCreated StudyMaterial[] @relation("StudyMaterialsCreated")
 
   @@index([companyId])
   @@map("users")
@@ -242,9 +252,10 @@ model Subject {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   company      Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  courses      CourseSubject[]
-  employees    Employee[]
-  liveSessions LiveSession[]
+  courses        CourseSubject[]
+  employees      Employee[]
+  liveSessions   LiveSession[]
+  studyMaterials StudyMaterial[]
 
   @@unique([companyId, name])
   @@map("subjects")
@@ -303,8 +314,9 @@ model Course {
   subjects CourseSubject[]
   batches  Batch[]
   students     StudentCourse[]
-  tests        Test[]
-  liveSessions LiveSession[]
+  tests          Test[]
+  liveSessions   LiveSession[]
+  studyMaterials StudyMaterial[]
 
   @@index([branchId])
   @@index([deletedAt])
@@ -444,8 +456,9 @@ model Employee {
   phone            String
   emergencyContact String?      @map("emergency_contact")
   address          String?      @db.Text
-  aadhaarFileId    String?      @map("aadhaar_file_id")
-  deletedAt        DateTime?    @map("deleted_at")
+  aadhaarFileId    String?         @map("aadhaar_file_id")
+  status           EmployeeStatus  @default(ACTIVE)
+  deletedAt        DateTime?       @map("deleted_at")
   createdAt        DateTime     @default(now()) @map("created_at")
   updatedAt        DateTime     @updatedAt @map("updated_at")
 
@@ -583,6 +596,29 @@ model LiveSession {
   @@index([branchId, status])
   @@index([courseId, subjectId, status])
   @@map("live_sessions")
+}
+
+model StudyMaterial {
+  id          String    @id @default(uuid())
+  branchId    String    @map("branch_id")
+  courseId    String    @map("course_id")
+  subjectId   String    @map("subject_id")
+  name        String
+  fileId      String    @map("file_id")
+  createdById String    @map("created_by_id")
+  deletedAt   DateTime? @map("deleted_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  branch    Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  course    Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  createdBy User    @relation("StudyMaterialsCreated", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([branchId])
+  @@index([courseId, subjectId])
+  @@index([deletedAt])
+  @@map("study_materials")
 }
 
 model Test {

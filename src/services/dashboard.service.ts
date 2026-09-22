@@ -21,6 +21,115 @@ function branchFilter(user: TokenPayload, branchId?: string) {
 
 export class DashboardService {
   async stats(user: TokenPayload, query: { branchId?: string; month?: string; year?: string }) {
+    if (user.role === "STUDENT") return this.studentStats(user);
+    if (user.role === "TEACHER") return this.teacherStats(user, query);
+    return this.staffStats(user, query);
+  }
+
+  private async studentStats(user: TokenPayload) {
+    const student = await prisma.student.findFirst({
+      where: { userId: user.id, ...ALIVE },
+      include: {
+        courses: { include: { course: { include: { subjects: { include: { subject: true } } } } } },
+        batches: { include: { batch: true } },
+      },
+    });
+    if (!student) throw new AppError(404, "Student profile not found");
+    const courseIds = student.courses.map((c) => c.courseId);
+    const subjects = [
+      ...new Map(
+        student.courses.flatMap((c) => c.course.subjects.map((s) => [s.subject.id, s.subject] as const)),
+      ).values(),
+    ];
+    const [testsAvailable, testsGiven, latest, liveNow] = await Promise.all([
+      courseIds.length
+        ? prisma.test.count({ where: { courseId: { in: courseIds }, ...ALIVE } })
+        : 0,
+      prisma.testAttempt.count({
+        where: { studentId: student.id, status: { in: ["SUBMITTED", "AUTO_SUBMITTED"] } },
+      }),
+      prisma.testAttempt.findFirst({
+        where: { studentId: student.id, status: { in: ["SUBMITTED", "AUTO_SUBMITTED"] } },
+        orderBy: { submittedAt: "desc" },
+        include: { test: { select: { name: true, totalMarks: true } } },
+      }),
+      courseIds.length
+        ? prisma.liveSession.count({ where: { courseId: { in: courseIds }, status: "LIVE" } })
+        : 0,
+    ]);
+    return {
+      role: "STUDENT" as const,
+      courses: student.courses.map((c) => ({ id: c.course.id, name: c.course.name })),
+      batches: student.batches
+        .filter((b) => !b.batch.deletedAt)
+        .map((b) => ({ id: b.batch.id, name: b.batch.name, courseId: b.batch.courseId })),
+      subjects: subjects.map((s) => ({ id: s.id, name: s.name })),
+      testsAvailable,
+      testsGiven,
+      liveNow,
+      latestResult: latest
+        ? {
+            testName: latest.test.name,
+            marks: toNumber(latest.marksObtained),
+            total: latest.test.totalMarks,
+          }
+        : null,
+    };
+  }
+
+  private async teacherStats(user: TokenPayload, query: { branchId?: string; month?: string; year?: string }) {
+    const branches = await prisma.branch.findMany({ where: branchFilter(user, query.branchId) });
+    const ids = branches.map((b) => b.id);
+    if (!ids.length) throw new AppError(404, "No branch found");
+    const now = new Date();
+    const year = Number(query.year) || now.getFullYear();
+    const month = query.month ? Number(query.month) - 1 : now.getMonth();
+    const start = new Date(year, month, 1);
+    const end = new Date(year, month + 1, 1);
+    const employee = await prisma.employee.findFirst({
+      where: { userId: user.id, deletedAt: null },
+      include: { subject: { select: { id: true, name: true } } },
+    });
+    const [
+      courseCount,
+      batchCount,
+      studentCount,
+      testsAdded,
+      liveNow,
+      liveThisMonth,
+      leaveCount,
+    ] = await Promise.all([
+      prisma.course.count({ where: { branchId: { in: ids }, ...ALIVE } }),
+      prisma.batch.count({ where: { branchId: { in: ids }, ...ALIVE } }),
+      prisma.student.count({ where: { branchId: { in: ids }, status: "ACTIVE", ...ALIVE } }),
+      prisma.test.count({ where: { branchId: { in: ids }, createdById: user.id, ...ALIVE } }),
+      prisma.liveSession.count({ where: { branchId: { in: ids }, status: "LIVE" } }),
+      prisma.liveSession.count({ where: { branchId: { in: ids }, startedAt: { gte: start, lt: end } } }),
+      employee ? prisma.leaveRequest.count({ where: { employeeId: employee.id } }) : 0,
+    ]);
+    const subjectCount = await prisma.courseSubject.groupBy({
+      by: ["subjectId"],
+      where: { course: { branchId: { in: ids }, ...ALIVE } },
+    });
+    return {
+      role: "TEACHER" as const,
+      year,
+      month: month + 1,
+      courseCount,
+      subjectCount: subjectCount.length,
+      batchCount,
+      studentCount,
+      testsAdded,
+      liveNow,
+      liveThisMonth,
+      leaveCount,
+      salary: employee ? toNumber(employee.salary) : 0,
+      salaryDate: employee?.salaryDate ?? null,
+      subjectName: employee?.subject?.name ?? null,
+    };
+  }
+
+  private async staffStats(user: TokenPayload, query: { branchId?: string; month?: string; year?: string }) {
     const branches = await prisma.branch.findMany({ where: branchFilter(user, query.branchId) });
     const ids = branches.map((b) => b.id);
     if (!ids.length) {
@@ -142,6 +251,7 @@ export class DashboardService {
       testsAdded,
       testsGiven,
       branchBreakdown,
+      role: user.role,
     };
   }
 }
@@ -298,11 +408,16 @@ export class NotificationService {
   /** Drop past-due rows. Keep unmarked rows that are still in the due window so sync does not recreate them as unread. */
   private async purge(userId: string) {
     await prisma.notification.deleteMany({
-      where: { userId, dueDate: { lt: startOfDay(new Date()) }, type: { not: "LIVE_CLASS" } },
+      where: {
+        userId,
+        dueDate: { lt: startOfDay(new Date()) },
+        type: { notIn: ["LIVE_CLASS", "STUDY_MATERIAL", "TEST"] },
+      },
     });
   }
 
   private async sync(user: TokenPayload) {
+    if (user.role !== "ADMIN" && user.role !== "MANAGER") return;
     const branches = await prisma.branch.findMany({ where: branchFilter(user) });
     const ids = branches.map((b) => b.id);
     if (!ids.length) return;

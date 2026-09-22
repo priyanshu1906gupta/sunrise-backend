@@ -20,7 +20,7 @@ export class AuthController {
   async register(req: Request, res: Response, next: NextFunction) {
     try {
       const data = registerSchema.parse(req.body);
-      sendCreated(res, await authService.register(data), "Registered successfully");
+      sendCreated(res, await authService.register(data), "Registered. Wait for admin to activate your account after payment.");
     } catch (error) {
       next(error);
     }
@@ -52,6 +52,7 @@ export class AuthController {
           googleClientId: null,
           idleTimeoutMs: env.IDLE_TIMEOUT_MS,
           courses: await authService.publicCourses(),
+          ...(await authService.publicBranding()),
         },
         "Auth config",
       );

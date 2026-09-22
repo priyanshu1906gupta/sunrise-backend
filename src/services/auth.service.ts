@@ -45,6 +45,7 @@ function tokenFor(user: User): string {
     role: user.role,
     companyId: user.companyId,
     branchId: user.branchId,
+    sessionEpoch: user.sessionEpoch,
   };
   return signToken(payload);
 }
@@ -82,7 +83,7 @@ export class AuthService {
       branchId: branch.id,
     };
 
-    const student = await studentService.create(
+    await studentService.create(
       admin,
       {
         fullName: `${input.firstName} ${input.lastName}`.trim(),
@@ -97,15 +98,12 @@ export class AuthService {
         registrationCharge: 0,
         paidAmount: 0,
         password: input.password,
-        status: "ACTIVE",
+        status: "INACTIVE",
       },
       { skipWriteCheck: true },
     );
 
-    if (!student.userId) throw new AppError(500, "Could not create student login");
-    const user = await prisma.user.findUnique({ where: { id: student.userId } });
-    if (!user) throw new AppError(500, "Could not create student login");
-    return sessionFor(user);
+    return { pendingActivation: true };
   }
 
   async login(input: LoginInput) {
@@ -127,6 +125,20 @@ export class AuthService {
         throw new AppError(403, "Student profile not found");
       }
       await prisma.$transaction((tx) => studentMayLogin(tx, user.student!.id));
+      await revokeAllRefreshTokens(user.id);
+      const bumped = await prisma.user.update({
+        where: { id: user.id },
+        data: { sessionEpoch: { increment: 1 } },
+      });
+      return sessionFor(bumped);
+    }
+    if (user.role === "TEACHER") {
+      const employee = await prisma.employee.findFirst({
+        where: { userId: user.id, deletedAt: null },
+      });
+      if (!employee || employee.status !== "ACTIVE") {
+        throw new AppError(403, "Your account is deactivated. Kindly contact the administrator.", "ACCOUNT_DEACTIVATED");
+      }
     }
     return sessionFor(user);
   }
@@ -273,6 +285,21 @@ export class AuthService {
       orderBy: { name: "asc" },
     });
     return courses.map((c) => ({ id: c.id, name: c.name, durationMonths: c.durationMonths, price: Number(c.price) }));
+  }
+
+  async publicBranding() {
+    const company = await prisma.company.findFirst({
+      orderBy: { createdAt: "asc" },
+      include: { images: { orderBy: { sortOrder: "asc" } } },
+    });
+    if (!company) {
+      return { logoUrl: null as string | null, loginImages: [] as string[] };
+    }
+    const urls = await fileService.getUrls([company.logoFileId, ...company.images.map((i) => i.fileId)]);
+    return {
+      logoUrl: urls.get(company.logoFileId ?? "") ?? null,
+      loginImages: company.images.map((i) => urls.get(i.fileId)).filter((url): url is string => Boolean(url)),
+    };
   }
 
   private async findByLogin(raw: string) {

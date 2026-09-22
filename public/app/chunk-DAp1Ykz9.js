@@ -1,1 +1,0 @@
-import{Er as uE}from"./chunk-D8O7HYrJ.js";var e=class i{transform(n){return`\u20B9${Number(n??0).toLocaleString(`en-IN`,{minimumFractionDigits:0,maximumFractionDigits:2})}`}static{this.ɵfac=function(r){return new(r||i)}}static{this.ɵpipe=uE({name:`inr`,type:i,pure:!0})}};export{e as t};

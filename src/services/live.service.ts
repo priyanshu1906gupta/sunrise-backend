@@ -4,9 +4,7 @@ import { TokenPayload } from "../lib/jwt";
 import { assertBranchAccess, managerBranchId } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
 import { ALIVE } from "../lib/soft-delete";
-import { startOfDay } from "../lib/files";
 import { env } from "../config/env";
-import { pushService } from "./push.service";
 import { emitLiveEnded, emitLiveStarted, wipeChat, wipeMedia } from "../lib/live-events";
 
 function isStaff(role: TokenPayload["role"]): boolean {
@@ -137,7 +135,7 @@ export class LiveService {
       },
     });
 
-    await this.notifyEnrolled(session.id, course.branchId, course.id, course.name, subject.name);
+    await this.notifyEnrolled(session.id, course.branchId, course.id, course.name, subject.name, user.id);
     emitLiveStarted(course.branchId, {
       sessionId: session.id,
       courseId: course.id,
@@ -245,47 +243,21 @@ export class LiveService {
     courseId: string,
     courseName: string,
     subjectName: string,
+    startedById: string,
   ) {
-    const enrolled = await prisma.studentCourse.findMany({
-      where: {
-        courseId,
-        student: { ...ALIVE, status: "ACTIVE", userId: { not: null } },
-      },
-      select: { student: { select: { userId: true } } },
+    const { enrolledStudentUserIds, branchTeacherUserIds, notifyUsers } = await import("../lib/notify-students");
+    const studentIds = await enrolledStudentUserIds(courseId);
+    const teacherIds = await branchTeacherUserIds(branchId, startedById);
+    await notifyUsers({
+      userIds: [...studentIds, ...teacherIds],
+      type: "LIVE_CLASS",
+      title: "Live class started",
+      message: `${courseName} / ${subjectName}`,
+      entityId: sessionId,
+      branchId,
+      url: `/live-classes/${sessionId}`,
+      data: { liveSessionId: sessionId },
     });
-    const userIds = [
-      ...new Set(enrolled.map((row) => row.student.userId).filter((id): id is string => Boolean(id))),
-    ];
-    if (!userIds.length) return;
-
-    const title = "Live class started";
-    const message = `${courseName} / ${subjectName}`;
-    const dueDate = startOfDay(new Date());
-    dueDate.setHours(12, 0, 0, 0);
-
-    await prisma.notification.createMany({
-      data: userIds.map((userId) => ({
-        userId,
-        type: "LIVE_CLASS" as const,
-        title,
-        message,
-        entityId: sessionId,
-        branchId,
-        dueDate,
-      })),
-      skipDuplicates: true,
-    });
-
-    const hash = `/live-classes/${sessionId}`;
-    await Promise.all(
-      userIds.map((userId) =>
-        pushService.notifyUser(userId, title, message, {
-          type: "LIVE_CLASS",
-          liveSessionId: sessionId,
-          url: hash,
-        }),
-      ),
-    );
   }
 }
 

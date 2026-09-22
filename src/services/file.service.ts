@@ -58,6 +58,42 @@ export class FileService {
     return this.toDto(created, publicBase);
   }
 
+  async uploadPdf(user: TokenPayload, file: Express.Multer.File) {
+    if (user.role !== "ADMIN" && user.role !== "MANAGER" && user.role !== "TEACHER") {
+      throw new AppError(403, "You do not have access to this resource");
+    }
+    const mime = (file.mimetype || "").toLowerCase();
+    const looksPdf = mime === "application/pdf" || file.originalname.toLowerCase().endsWith(".pdf");
+    const header = file.buffer.subarray(0, 4).toString("utf8");
+    if (!looksPdf || header !== "%PDF") {
+      throw new AppError(400, "Only PDF files are allowed");
+    }
+
+    let dir: string;
+    try {
+      dir = ensureCompanyDir(user.companyId);
+    } catch (error) {
+      const code = error && typeof error === "object" && "code" in error ? String((error as { code?: string }).code) : "";
+      if (code === "ENOENT" || code === "EACCES") {
+        throw new AppError(500, "Could not save the file on the server. Upload storage is not writable.");
+      }
+      throw error;
+    }
+    const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.pdf`;
+    const relativePath = `${user.companyId}/${filename}`;
+    fs.writeFileSync(path.join(dir, filename), file.buffer);
+
+    const created = await prisma.file.create({
+      data: {
+        companyId: user.companyId,
+        relativePath,
+        originalName: file.originalname,
+        mimeType: "application/pdf",
+      },
+    });
+    return this.toDto(created);
+  }
+
   async remove(user: TokenPayload, id: string) {
     const file = await prisma.file.findUnique({ where: { id } });
     if (!file || file.companyId !== user.companyId) {
@@ -98,7 +134,7 @@ export class FileService {
   }
 
   private async isReferenced(fileId: string): Promise<boolean> {
-    const [students, employees, companies, companyImages, branches, branchPhotos] = await Promise.all([
+    const [students, employees, companies, companyImages, branches, branchPhotos, studyMaterials] = await Promise.all([
       prisma.student.count({ where: { photoFileId: fileId, deletedAt: null } }),
       prisma.employee.count({
         where: { deletedAt: null, OR: [{ photoFileId: fileId }, { aadhaarFileId: fileId }] },
@@ -107,8 +143,9 @@ export class FileService {
       prisma.companyImage.count({ where: { fileId } }),
       prisma.branch.count({ where: { logoFileId: fileId } }),
       prisma.branchPhoto.count({ where: { fileId } }),
+      prisma.studyMaterial.count({ where: { fileId, deletedAt: null } }),
     ]);
-    return students + employees + companies + companyImages + branches + branchPhotos > 0;
+    return students + employees + companies + companyImages + branches + branchPhotos + studyMaterials > 0;
   }
 
   /** Resolve a public URL for a stored file id. */

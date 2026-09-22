@@ -97,6 +97,7 @@ export async function studentMayLogin(tx: Prisma.TransactionClient, studentId: s
   today.setHours(0, 0, 0, 0);
   const anyActive = batches.some((b) => new Date(b.endDate) >= today);
   if (!anyActive) {
+    await tx.student.update({ where: { id: studentId }, data: { status: "INACTIVE" } });
     throw new AppError(403, "Your batch duration is over. Kindly contact the administrator.");
   }
 }

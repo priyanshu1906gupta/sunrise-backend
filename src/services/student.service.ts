@@ -17,6 +17,7 @@ import {
   studentsToExcelBuffer,
 } from "../lib/student-excel";
 import { upsertStudentUser } from "../lib/student-login";
+import { revokeAllRefreshTokens } from "../lib/refresh-token";
 
 type StudentRow = Student & {
   branch?: { id: string; name: string };
@@ -68,9 +69,10 @@ export class StudentService {
       branch: { companyId: user.companyId },
     };
     if (query.listStatus === "deactive") {
-      where.deletedAt = { not: null };
+      where.OR = [{ deletedAt: { not: null } }, { status: "INACTIVE" }];
     } else {
       Object.assign(where, ALIVE);
+      where.status = "ACTIVE";
     }
     if (branchId) where.branchId = branchId;
     if (query.courseId) where.courses = { some: { courseId: query.courseId } };
@@ -345,7 +347,30 @@ export class StudentService {
     }
     await assertBranchAccess(user, existing.branchId);
     await prisma.student.update({ where: { id }, data: { deletedAt: new Date(), status: "INACTIVE" } });
+    if (existing.userId) await revokeAllRefreshTokens(existing.userId);
     return null;
+  }
+
+  async setLoginStatus(user: TokenPayload, id: string, status: "ACTIVE" | "INACTIVE") {
+    if (user.role !== "ADMIN" && user.role !== "MANAGER") {
+      throw new AppError(403, "You do not have access to this resource");
+    }
+    const existing = await prisma.student.findUnique({
+      where: { id },
+      include: { branch: true },
+    });
+    if (!existing || existing.branch.companyId !== user.companyId) {
+      throw new AppError(404, "Student not found");
+    }
+    if (existing.deletedAt) {
+      throw new AppError(400, "Restore the deleted student before changing login status");
+    }
+    await assertBranchAccess(user, existing.branchId);
+    await prisma.student.update({ where: { id }, data: { status } });
+    if (status === "INACTIVE" && existing.userId) {
+      await revokeAllRefreshTokens(existing.userId);
+    }
+    return this.get(user, id);
   }
 
   async restore(user: TokenPayload, id: string) {

@@ -15,6 +15,7 @@ import {
   PushController,
   TestController,
   LiveController,
+  StudyMaterialController,
 } from "../controllers/domain.controller";
 import { authenticate, authorize, authorizeWrite } from "../middleware/auth";
 import { healthCheck } from "../utils/response";
@@ -43,6 +44,7 @@ const push = new PushController();
 const subscriptions = new SubscriptionController();
 const tests = new TestController();
 const live = new LiveController();
+const studyMaterials = new StudyMaterialController();
 
 router.get("/health", healthCheck);
 router.get("/health/db", async (_req, res) => {
@@ -86,6 +88,7 @@ router.get("/auth/me", authenticate, (req, res, next) => auth.me(req, res, next)
 router.put("/auth/change-password", authenticate, (req, res, next) => auth.changePassword(req, res, next));
 
 router.post("/files", authenticate, upload.single("file"), (req, res, next) => files.upload(req, res, next));
+router.post("/files/pdf", authenticate, upload.single("file"), (req, res, next) => files.uploadPdf(req, res, next));
 router.delete("/files/:id", authenticate, (req, res, next) => files.remove(req, res, next));
 
 router.get("/company", authenticate, (req, res, next) => company.get(req, res, next));
@@ -107,6 +110,9 @@ router.put("/students/:id", authenticate, authorizeWrite, (req, res, next) => st
 router.delete("/students/:id", authenticate, authorizeWrite, (req, res, next) => students.remove(req, res, next));
 router.post("/students/:id/payments", authenticate, authorizeWrite, (req, res, next) => students.addPayment(req, res, next));
 router.post("/students/:id/restore", authenticate, authorizeWrite, (req, res, next) => students.restore(req, res, next));
+router.post("/students/:id/login-status", authenticate, authorizeWrite, (req, res, next) =>
+  students.setLoginStatus(req, res, next),
+);
 
 router.get("/employees", authenticate, (req, res, next) => employees.list(req, res, next));
 router.post("/employees", authenticate, authorizeWrite, (req, res, next) => employees.create(req, res, next));
@@ -115,6 +121,9 @@ router.put("/employees/:id", authenticate, authorizeWrite, (req, res, next) => e
 router.delete("/employees/:id", authenticate, authorizeWrite, (req, res, next) => employees.remove(req, res, next));
 router.post("/employees/:id/reset-password", authenticate, authorize("ADMIN"), (req, res, next) =>
   employees.resetPassword(req, res, next),
+);
+router.post("/employees/:id/login-status", authenticate, authorizeWrite, (req, res, next) =>
+  employees.setLoginStatus(req, res, next),
 );
 
 router.get("/catalogs", authenticate, (req, res, next) => academic.catalogs(req, res, next));
@@ -171,6 +180,15 @@ router.post("/live/:id/end", authenticate, authorize("ADMIN", "MANAGER", "TEACHE
   live.end(req, res, next),
 );
 router.get("/live/:id", authenticate, (req, res, next) => live.join(req, res, next));
+
+router.get("/study-materials/:id/file", authenticate, (req, res, next) => studyMaterials.file(req, res, next));
+router.get("/study-materials", authenticate, (req, res, next) => studyMaterials.list(req, res, next));
+router.post("/study-materials", authenticate, authorize("ADMIN", "MANAGER", "TEACHER"), (req, res, next) =>
+  studyMaterials.create(req, res, next),
+);
+router.delete("/study-materials/:id", authenticate, authorize("ADMIN", "MANAGER", "TEACHER"), (req, res, next) =>
+  studyMaterials.remove(req, res, next),
+);
 
 router.get("/dashboard", authenticate, (req, res, next) => dashboard.stats(req, res, next));
 router.get("/calendar", authenticate, (req, res, next) => dashboard.calendar(req, res, next));

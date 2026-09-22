@@ -37,11 +37,14 @@ import {
   testHeartbeatSchema,
   testSubmitSchema,
   startLiveSchema,
+  createStudyMaterialSchema,
+  loginStatusSchema,
 } from "../validators/domain.validator";
 import { AppError } from "../middleware/errorHandler";
 import { hrmService } from "../services/hrm.service";
 import { testService } from "../services/test.service";
 import { liveService } from "../services/live.service";
+import { studyMaterialService } from "../services/study-material.service";
 
 export class FileController {
   async upload(req: Request, res: Response, next: NextFunction) {
@@ -50,6 +53,15 @@ export class FileController {
       const host = req.get("host");
       const publicBase = host ? `${req.protocol}://${host}` : undefined;
       sendCreated(res, await fileService.upload(requireUser(req), req.file, publicBase), "Photo uploaded");
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async uploadPdf(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.file) throw new AppError(400, "PDF file is required");
+      sendCreated(res, await fileService.uploadPdf(requireUser(req), req.file), "PDF uploaded");
     } catch (error) {
       next(error);
     }
@@ -207,6 +219,16 @@ export class StudentController {
     }
   }
 
+  async setLoginStatus(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = idParamSchema.parse(req.params);
+      const { status } = loginStatusSchema.parse(req.body);
+      sendSuccess(res, await studentService.setLoginStatus(requireUser(req), id, status), "Login status updated");
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async exportExcel(req: Request, res: Response, next: NextFunction) {
     try {
       const branchId = typeof req.query.branchId === "string" ? req.query.branchId : undefined;
@@ -282,6 +304,16 @@ export class EmployeeController {
     try {
       const { id } = idParamSchema.parse(req.params);
       sendSuccess(res, await employeeService.resetManagerPassword(requireUser(req), id), "Password reset");
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async setLoginStatus(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = idParamSchema.parse(req.params);
+      const { status } = loginStatusSchema.parse(req.body);
+      sendSuccess(res, await employeeService.setLoginStatus(requireUser(req), id, status), "Login status updated");
     } catch (error) {
       next(error);
     }
@@ -738,6 +770,51 @@ export class LiveController {
     try {
       const { id } = idParamSchema.parse(req.params);
       sendSuccess(res, await liveService.join(requireUser(req), id), "Live class fetched");
+    } catch (error) {
+      next(error);
+    }
+  }
+}
+
+export class StudyMaterialController {
+  async list(req: Request, res: Response, next: NextFunction) {
+    try {
+      const branchId = typeof req.query.branchId === "string" ? req.query.branchId : undefined;
+      const courseId = typeof req.query.courseId === "string" ? req.query.courseId : undefined;
+      const subjectId = typeof req.query.subjectId === "string" ? req.query.subjectId : undefined;
+      sendSuccess(res, await studyMaterialService.list(requireUser(req), { branchId, courseId, subjectId }), "Study materials fetched");
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async create(req: Request, res: Response, next: NextFunction) {
+    try {
+      const data = createStudyMaterialSchema.parse(req.body);
+      sendCreated(res, await studyMaterialService.create(requireUser(req), data), "Study material saved");
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async remove(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = idParamSchema.parse(req.params);
+      sendSuccess(res, await studyMaterialService.remove(requireUser(req), id), "Study material deleted");
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async file(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = idParamSchema.parse(req.params);
+      const { abs, name } = await studyMaterialService.filePath(requireUser(req), id);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `inline; filename="${name.replace(/"/g, "")}"`);
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.sendFile(abs);
     } catch (error) {
       next(error);
     }

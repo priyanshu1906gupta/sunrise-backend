@@ -244,6 +244,28 @@ export class EmployeeService {
     return null;
   }
 
+  async setLoginStatus(user: TokenPayload, id: string, status: "ACTIVE" | "INACTIVE") {
+    if (user.role !== "ADMIN" && user.role !== "MANAGER") {
+      throw new AppError(403, "You do not have access to this resource");
+    }
+    const existing = await prisma.employee.findUnique({
+      where: { id },
+      include: { branch: true },
+    });
+    if (!existing || existing.branch.companyId !== user.companyId || existing.deletedAt) {
+      throw new AppError(404, "Employee not found");
+    }
+    if (existing.role !== "TEACHER") {
+      throw new AppError(400, "Login status can only be changed for teachers");
+    }
+    await assertBranchAccess(user, existing.branchId);
+    await prisma.employee.update({ where: { id }, data: { status } });
+    if (status === "INACTIVE" && existing.userId) {
+      await revokeAllRefreshTokens(existing.userId);
+    }
+    return this.get(user, id);
+  }
+
   async resetManagerPassword(user: TokenPayload, id: string) {
     if (user.role !== "ADMIN") {
       throw new AppError(403, "Only admin can reset a password");
@@ -419,6 +441,7 @@ export class EmployeeService {
       phone: employee.phone,
       subjectId: employee.subjectId,
       subjectName: employee.subject?.name ?? null,
+      status: employee.status,
     };
   }
 }

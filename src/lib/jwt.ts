@@ -9,6 +9,7 @@ export interface TokenPayload {
   role: UserRole;
   companyId: string;
   branchId: string | null;
+  sessionEpoch?: number;
 }
 
 export function signToken(payload: TokenPayload): string {
