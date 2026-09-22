@@ -77,6 +77,14 @@ assets/*
 /public/assets/**
 !/public/assets/.gitkeep
 
+# Native installers served from the landing Download page
+/public/downloads/latest/*.apk
+/public/downloads/latest/*.exe
+/public/downloads/latest/*.ipa
+/dist/public/downloads/latest/*.apk
+/dist/public/downloads/latest/*.exe
+/dist/public/downloads/latest/*.ipa
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache

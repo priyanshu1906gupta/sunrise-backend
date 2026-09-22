@@ -19,7 +19,16 @@ function findMonorepoRoot() {
 
 const BACKEND_ROOT = path.resolve(__dirname, "..");
 const REPO_ROOT = findMonorepoRoot() || BACKEND_ROOT;
-const LANDING_SRC = path.join(REPO_ROOT, "sunrise-landing");
+
+function resolveLandingSrc(repoRoot) {
+  const candidates = [path.join(repoRoot, "sunrise-landing"), path.join(repoRoot, "sunrise-landing page")];
+  for (const dir of candidates) {
+    if (fs.existsSync(path.join(dir, "index.html"))) return dir;
+  }
+  return candidates[0];
+}
+
+const LANDING_SRC = resolveLandingSrc(REPO_ROOT);
 const ANGULAR_SRC = path.join(
   REPO_ROOT,
   "sunrise-frontend",
@@ -28,7 +37,8 @@ const ANGULAR_SRC = path.join(
   "browser",
 );
 
-const PRESERVE_IN_PUBLIC = new Set(["assets", "app"]);
+const PRESERVE_IN_PUBLIC = new Set(["assets", "app", "downloads"]);
+const SKIP_LANDING_NAMES = new Set([".git", "node_modules", ".gitignore"]);
 
 const APP_REDIRECT = `<!DOCTYPE html>
 <html lang="en">
@@ -58,7 +68,7 @@ function copyLanding(destPublic) {
   }
   fs.mkdirSync(destPublic, { recursive: true });
   for (const entry of fs.readdirSync(LANDING_SRC, { withFileTypes: true })) {
-    if (PRESERVE_IN_PUBLIC.has(entry.name)) continue;
+    if (PRESERVE_IN_PUBLIC.has(entry.name) || SKIP_LANDING_NAMES.has(entry.name)) continue;
     const from = path.join(LANDING_SRC, entry.name);
     const to = path.join(destPublic, entry.name);
     if (entry.isDirectory()) {

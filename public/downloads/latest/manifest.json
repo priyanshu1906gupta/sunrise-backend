@@ -1,0 +1,20 @@
+{
+  "updatedAt": "2026-09-22T13:11:01.706Z",
+  "android": {
+    "available": true,
+    "version": "1.0.0",
+    "size": 12391277,
+    "updatedAt": "2026-09-22T13:10:27.253Z",
+    "file": "android.apk"
+  },
+  "windows": {
+    "available": true,
+    "version": "1.0.0",
+    "size": 151099855,
+    "updatedAt": "2026-09-22T12:23:12.768Z",
+    "file": "windows.exe"
+  },
+  "ios": {
+    "available": false
+  }
+}
