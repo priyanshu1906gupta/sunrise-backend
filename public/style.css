@@ -908,6 +908,10 @@ a img.aligncenter {
     overflow: hidden;
     height: 100%;	
 	vertical-align: middle;
+    padding-top: 88px;
+    background-size: cover;
+    background-position: center top;
+    background-repeat: no-repeat;
 }
 
 .first-section::before {
@@ -2402,18 +2406,19 @@ select.mobile-device {
 
 .contact_form {
     border: none;
-    box-shadow: 0 5px 14px rgba(0, 0, 0, 0.1);
-    background-color: #333333;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
+    background-color: #ffffff;
     padding: 40px 30px;
 	margin-right: -15px;
+    border-radius: 12px;
 }
 
 .contact_form .form-control {
-    background-color: #fff;
+    background-color: #f7f8fa;
     margin-bottom: 30px;
-    border: 1px solid #ebebeb;
+    border: 1px solid #e2e6ee;
     box-sizing: border-box;
-    color: #bcbcbc;
+    color: #2d3032;
     font-size: 16px;
     outline: 0 none;
     padding: 10px 25px;
@@ -2443,7 +2448,7 @@ select.mobile-device {
 }
 
 #contact {
-    background: url(images/bg.png) no-repeat center center #fff;
+    background: url(images/bg.png) no-repeat center center #f4f6f8;
 }
 
 .map-box{

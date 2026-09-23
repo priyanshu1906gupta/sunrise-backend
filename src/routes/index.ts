@@ -182,6 +182,7 @@ router.post("/live/:id/end", authenticate, authorize("ADMIN", "MANAGER", "TEACHE
 router.get("/live/:id", authenticate, (req, res, next) => live.join(req, res, next));
 
 router.get("/study-materials/:id/file", authenticate, (req, res, next) => studyMaterials.file(req, res, next));
+router.get("/study-materials/:id", authenticate, (req, res, next) => studyMaterials.get(req, res, next));
 router.get("/study-materials", authenticate, (req, res, next) => studyMaterials.list(req, res, next));
 router.post("/study-materials", authenticate, authorize("ADMIN", "MANAGER", "TEACHER"), (req, res, next) =>
   studyMaterials.create(req, res, next),
@@ -194,6 +195,7 @@ router.get("/dashboard", authenticate, (req, res, next) => dashboard.stats(req, 
 router.get("/calendar", authenticate, (req, res, next) => dashboard.calendar(req, res, next));
 router.get("/notifications", authenticate, (req, res, next) => dashboard.notifications(req, res, next));
 router.put("/notifications/:id/read", authenticate, (req, res, next) => dashboard.readNotification(req, res, next));
+router.post("/notifications/read-all", authenticate, (req, res, next) => dashboard.clearNotifications(req, res, next));
 router.get("/content/terms", authenticate, (req, res, next) => dashboard.terms(req, res, next));
 router.get("/content/help", authenticate, (req, res, next) => dashboard.help(req, res, next));
 router.post("/content/help/query", authenticate, (req, res, next) => dashboard.sendHelpQuery(req, res, next));

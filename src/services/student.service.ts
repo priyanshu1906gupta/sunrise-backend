@@ -123,7 +123,7 @@ export class StudentService {
     const ledgerPaid = student.payments.reduce((sum, p) => sum + toNumber(p.amount), 0);
     const dto = this.toListDto(student, photoUrl, ledgerPaid);
     await this.persistDueIfStale(student.id, toNumber(student.dueAmount), dto.dueAmount);
-    return {
+    const detail = {
       ...dto,
       gender: student.gender,
       dateOfBirth: student.dateOfBirth,
@@ -146,6 +146,22 @@ export class StudentService {
         paymentMode: p.mode,
       })),
     };
+    if (user.role === "TEACHER") {
+      return {
+        ...detail,
+        courseCharge: null,
+        registrationCharge: null,
+        paymentAmount: null,
+        paymentDate: null,
+        lastPaymentDate: null,
+        paidAmount: null,
+        dueAmount: null,
+        paymentStatus: null,
+        nextPaymentDate: null,
+        payments: [],
+      };
+    }
+    return detail;
   }
 
   async mine(user: TokenPayload) {

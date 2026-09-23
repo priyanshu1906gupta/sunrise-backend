@@ -57,13 +57,22 @@ export class DashboardService {
         ? prisma.liveSession.count({ where: { courseId: { in: courseIds }, status: "LIVE" } })
         : 0,
     ]);
+    const liveBatches = student.batches.filter((b) => !b.batch.deletedAt);
     return {
       role: "STUDENT" as const,
-      courses: student.courses.map((c) => ({ id: c.course.id, name: c.course.name })),
-      batches: student.batches
-        .filter((b) => !b.batch.deletedAt)
-        .map((b) => ({ id: b.batch.id, name: b.batch.name, courseId: b.batch.courseId })),
+      courses: student.courses.map((c) => ({
+        id: c.course.id,
+        name: c.course.name,
+        subjects: c.course.subjects.map((s) => ({ id: s.subject.id, name: s.subject.name })),
+      })),
+      batches: liveBatches.map((b) => ({ id: b.batch.id, name: b.batch.name, courseId: b.batch.courseId })),
       subjects: subjects.map((s) => ({ id: s.id, name: s.name })),
+      enrollments: student.courses.map((c) => ({
+        id: c.course.id,
+        name: c.course.name,
+        batches: liveBatches.filter((b) => b.batch.courseId === c.course.id).map((b) => b.batch.name),
+        subjects: c.course.subjects.map((s) => s.subject.name),
+      })),
       testsAvailable,
       testsGiven,
       liveNow,
@@ -124,7 +133,6 @@ export class DashboardService {
       liveThisMonth,
       leaveCount,
       salary: employee ? toNumber(employee.salary) : 0,
-      salaryDate: employee?.salaryDate ?? null,
       subjectName: employee?.subject?.name ?? null,
     };
   }
@@ -403,6 +411,15 @@ export class NotificationService {
       where: { id },
       data: { read: true, readAt: new Date() },
     });
+  }
+
+  async clearAll(user: TokenPayload) {
+    const hiddenAt = new Date(Date.now() - UNMARK_TTL_MS - 1000);
+    await prisma.notification.updateMany({
+      where: { userId: user.id },
+      data: { read: true, readAt: hiddenAt },
+    });
+    return { cleared: true };
   }
 
   /** Drop past-due rows. Keep unmarked rows that are still in the due window so sync does not recreate them as unread. */

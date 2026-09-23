@@ -78,10 +78,9 @@ assets/*
 !/public/assets/.gitkeep
 
 # Native installers served from the landing Download page
-/public/downloads/latest/*.apk
+# APK is committed so it can ship without cPanel upload access.
 /public/downloads/latest/*.exe
 /public/downloads/latest/*.ipa
-/dist/public/downloads/latest/*.apk
 /dist/public/downloads/latest/*.exe
 /dist/public/downloads/latest/*.ipa
 

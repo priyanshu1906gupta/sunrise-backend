@@ -255,8 +255,9 @@ body.host_version .icon_wrap {
 body.host_version .first-section {
     overflow: visible ;
     position: relative;
-	background-position: center;
+	background-position: center top;
 	background-size: cover;
+    padding-top: 88px;
 }
 
 body.host_version .first-section h2 {

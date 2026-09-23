@@ -18,6 +18,32 @@ function requireStaff(user: TokenPayload): void {
   }
 }
 
+export function youtubeIdFromUrl(raw: string): string | null {
+  try {
+    const url = new URL(raw.trim());
+    const host = url.hostname.replace(/^www\./, "");
+    if (host === "youtu.be") {
+      const id = url.pathname.split("/").filter(Boolean)[0];
+      return id || null;
+    }
+    if (host === "youtube.com" || host === "m.youtube.com" || host === "youtube-nocookie.com") {
+      if (url.searchParams.get("v")) return url.searchParams.get("v");
+      const parts = url.pathname.split("/").filter(Boolean);
+      if ((parts[0] === "embed" || parts[0] === "shorts" || parts[0] === "live") && parts[1]) {
+        return parts[1];
+      }
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function youtubeEmbedUrl(raw: string): string | null {
+  const id = youtubeIdFromUrl(raw);
+  return id ? `https://www.youtube-nocookie.com/embed/${id}` : null;
+}
+
 export class StudyMaterialService {
   private async studentRow(user: TokenPayload) {
     const student = await prisma.student.findFirst({
@@ -62,6 +88,8 @@ export class StudyMaterialService {
     return rows.map((row) => ({
       id: row.id,
       name: row.name,
+      kind: row.kind,
+      youtubeUrl: row.youtubeUrl,
       courseId: row.courseId,
       courseName: row.course.name,
       subjectId: row.subjectId,
@@ -71,9 +99,52 @@ export class StudyMaterialService {
     }));
   }
 
+  async get(user: TokenPayload, id: string) {
+    const row = await prisma.studyMaterial.findFirst({
+      where: { id, ...ALIVE },
+      include: {
+        course: { include: { branch: true } },
+        subject: { select: { id: true, name: true } },
+      },
+    });
+    if (!row || row.course.branch.companyId !== user.companyId) {
+      throw new AppError(404, "Study material not found");
+    }
+    await assertBranchAccess(user, row.branchId);
+    if (user.role === "STUDENT") {
+      const student = await this.studentRow(user);
+      if (!student.courses.some((c) => c.courseId === row.courseId)) {
+        throw new AppError(403, "You are not enrolled in this course");
+      }
+    } else {
+      requireStaff(user);
+    }
+    return {
+      id: row.id,
+      name: row.name,
+      kind: row.kind,
+      youtubeUrl: row.youtubeUrl,
+      youtubeEmbedUrl: row.youtubeUrl ? youtubeEmbedUrl(row.youtubeUrl) : null,
+      courseId: row.courseId,
+      courseName: row.course.name,
+      subjectId: row.subjectId,
+      subjectName: row.subject.name,
+      branchId: row.branchId,
+      createdAt: row.createdAt,
+    };
+  }
+
   async create(
     user: TokenPayload,
-    data: { branchId?: string; courseId: string; subjectId: string; name: string; fileId: string },
+    data: {
+      branchId?: string;
+      courseId: string;
+      subjectId: string;
+      name: string;
+      kind?: "PDF" | "YOUTUBE";
+      fileId?: string;
+      youtubeUrl?: string;
+    },
   ) {
     requireStaff(user);
     const course = await prisma.course.findFirst({
@@ -95,9 +166,21 @@ export class StudyMaterialService {
     });
     if (!subject) throw new AppError(404, "Subject not found");
 
-    const file = await prisma.file.findUnique({ where: { id: data.fileId } });
-    if (!file || file.companyId !== user.companyId || file.mimeType !== "application/pdf") {
-      throw new AppError(400, "Upload a PDF file first");
+    const kind = data.kind === "YOUTUBE" ? "YOUTUBE" : "PDF";
+    let fileId: string | null = null;
+    let youtubeUrl: string | null = null;
+    if (kind === "YOUTUBE") {
+      if (!data.youtubeUrl || !youtubeIdFromUrl(data.youtubeUrl)) {
+        throw new AppError(400, "Enter a valid YouTube link");
+      }
+      youtubeUrl = data.youtubeUrl.trim();
+    } else {
+      if (!data.fileId) throw new AppError(400, "Upload a PDF file first");
+      const file = await prisma.file.findUnique({ where: { id: data.fileId } });
+      if (!file || file.companyId !== user.companyId || file.mimeType !== "application/pdf") {
+        throw new AppError(400, "Upload a PDF file first");
+      }
+      fileId = file.id;
     }
 
     const created = await prisma.studyMaterial.create({
@@ -106,7 +189,9 @@ export class StudyMaterialService {
         courseId: course.id,
         subjectId: subject.id,
         name: data.name.trim(),
-        fileId: file.id,
+        kind,
+        fileId,
+        youtubeUrl,
         createdById: user.id,
       },
       include: {
@@ -131,6 +216,8 @@ export class StudyMaterialService {
     return {
       id: created.id,
       name: created.name,
+      kind: created.kind,
+      youtubeUrl: created.youtubeUrl,
       courseId: created.courseId,
       courseName: created.course.name,
       subjectId: created.subjectId,
@@ -151,7 +238,7 @@ export class StudyMaterialService {
     }
     await assertBranchAccess(user, row.branchId);
     await prisma.studyMaterial.update({ where: { id }, data: { deletedAt: new Date() } });
-    await fileService.removeIfUnused(user, row.fileId);
+    if (row.fileId) await fileService.removeIfUnused(user, row.fileId);
     return null;
   }
 
@@ -171,6 +258,9 @@ export class StudyMaterialService {
       }
     } else {
       requireStaff(user);
+    }
+    if (row.kind === "YOUTUBE" || !row.fileId) {
+      throw new AppError(400, "This material is a YouTube link");
     }
     const file = await prisma.file.findUnique({ where: { id: row.fileId } });
     if (!file) throw new AppError(404, "File not found");

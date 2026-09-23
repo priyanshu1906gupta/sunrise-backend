@@ -551,6 +551,14 @@ export class DashboardController {
     }
   }
 
+  async clearNotifications(req: Request, res: Response, next: NextFunction) {
+    try {
+      sendSuccess(res, await notificationService.clearAll(requireUser(req)), "Notifications cleared");
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async terms(req: Request, res: Response, next: NextFunction) {
     try {
       sendSuccess(res, await contentService.terms(requireUser(req)), "Terms fetched");
@@ -783,6 +791,15 @@ export class StudyMaterialController {
       const courseId = typeof req.query.courseId === "string" ? req.query.courseId : undefined;
       const subjectId = typeof req.query.subjectId === "string" ? req.query.subjectId : undefined;
       sendSuccess(res, await studyMaterialService.list(requireUser(req), { branchId, courseId, subjectId }), "Study materials fetched");
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async get(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = idParamSchema.parse(req.params);
+      sendSuccess(res, await studyMaterialService.get(requireUser(req), id), "Study material fetched");
     } catch (error) {
       next(error);
     }

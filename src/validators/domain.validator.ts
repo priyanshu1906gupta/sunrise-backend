@@ -225,13 +225,19 @@ export const startLiveSchema = z.object({
   subjectId: z.string().uuid(),
 });
 
-export const createStudyMaterialSchema = z.object({
-  branchId: z.string().uuid().optional(),
-  courseId: z.string().uuid(),
-  subjectId: z.string().uuid(),
-  name: z.string().min(1).max(200),
-  fileId: z.string().uuid(),
-});
+export const createStudyMaterialSchema = z
+  .object({
+    branchId: z.string().uuid().optional(),
+    courseId: z.string().uuid(),
+    subjectId: z.string().uuid(),
+    name: z.string().min(1).max(200),
+    kind: z.enum(["PDF", "YOUTUBE"]).default("PDF"),
+    fileId: z.string().uuid().optional(),
+    youtubeUrl: z.string().url().max(500).optional(),
+  })
+  .refine((v) => (v.kind === "YOUTUBE" ? !!v.youtubeUrl : !!v.fileId), {
+    message: "Upload a PDF or add a YouTube link",
+  });
 
 export const loginStatusSchema = z.object({
   status: z.enum(["ACTIVE", "INACTIVE"]),

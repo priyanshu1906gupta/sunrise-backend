@@ -74,7 +74,7 @@ export class EmployeeService {
     }
     await assertBranchAccess(user, employee.branchId);
     const urls = await fileService.getUrls([employee.photoFileId, employee.aadhaarFileId]);
-    return {
+    const dto = {
       ...this.toListDto(employee, urls.get(employee.photoFileId ?? "") ?? null),
       gender: employee.gender,
       salary: toNumber(employee.salary),
@@ -91,6 +91,11 @@ export class EmployeeService {
         paymentDate: s.paymentDate,
       })),
     };
+    if (user.role === "TEACHER") {
+      const { salary: _salary, salaryDate: _salaryDate, salaries: _salaries, ...safe } = dto;
+      return { ...safe, salaries: [] };
+    }
+    return dto;
   }
 
   async create(
