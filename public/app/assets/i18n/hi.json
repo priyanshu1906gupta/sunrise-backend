@@ -464,5 +464,7 @@
   "live.startingCamera": "कैमरा शुरू हो रहा है…",
   "live.cameraError": "कैमरा नहीं खुल सका। कैमरा और माइक की अनुमति दें, फिर गो लाइव करें।",
   "live.fullscreen": "फुल स्क्रीन",
-  "live.exitFullscreen": "फुल स्क्रीन बंद करें"
+  "live.exitFullscreen": "फुल स्क्रीन बंद करें",
+  "live.attending": "उपस्थित",
+  "live.noAttendees": "अभी कोई नहीं देख रहा"
 }

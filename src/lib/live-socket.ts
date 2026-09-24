@@ -10,6 +10,7 @@ import {
   addViewer,
   appendLiveChat,
   branchLiveRoom,
+  emitAttendees,
   emitChatToTeachers,
   liveChatHistory,
   removeMediaSocket,
@@ -82,7 +83,10 @@ export function attachLiveSocket(httpServer: HttpServer): Server {
         if (joined.role === "moderator") {
           await socket.join(teacherLiveRoom(sessionId));
           socket.emit("chat:history", liveChatHistory(sessionId));
+        } else {
+          addViewer(sessionId, socket.id, joined.displayName);
         }
+        emitAttendees(sessionId);
         ack?.();
       } catch (error) {
         ack?.(error instanceof AppError ? error.message : "Cannot join live class");
@@ -112,6 +116,10 @@ export function attachLiveSocket(httpServer: HttpServer): Server {
           user.liveRole = joined.role;
           user.displayName = joined.displayName;
           await socket.join(sessionLiveRoom(sessionId));
+          if (joined.role !== "moderator") {
+            addViewer(sessionId, socket.id, joined.displayName);
+            emitAttendees(sessionId);
+          }
         } catch (error) {
           ack?.(error instanceof AppError ? error.message : "Join the live class first");
           return;
@@ -148,6 +156,7 @@ export function attachLiveSocket(httpServer: HttpServer): Server {
         socket.data.liveSessionId = sessionId;
         const viewers = setPublisher(sessionId, socket.id);
         socket.to(sessionLiveRoom(sessionId)).emit("webrtc:teacher-online", { sessionId });
+        emitAttendees(sessionId);
         ack?.(undefined, viewers);
         for (const viewerId of viewers) {
           socket.emit("webrtc:viewer", { socketId: viewerId, sessionId });
@@ -169,7 +178,8 @@ export function attachLiveSocket(httpServer: HttpServer): Server {
         user.displayName = joined.displayName;
         await socket.join(sessionLiveRoom(sessionId));
         socket.data.liveSessionId = sessionId;
-        const teacherId = addViewer(sessionId, socket.id);
+        const teacherId = addViewer(sessionId, socket.id, joined.displayName);
+        emitAttendees(sessionId);
         ack?.(undefined, teacherId);
         if (teacherId) {
           io.to(teacherId).emit("webrtc:viewer", { socketId: socket.id, sessionId });
@@ -193,6 +203,7 @@ export function attachLiveSocket(httpServer: HttpServer): Server {
         } else if (change.publisherId) {
           io.to(change.publisherId).emit("webrtc:viewer-left", { socketId: socket.id, sessionId: change.sessionId });
         }
+        emitAttendees(change.sessionId);
       }
     });
   });

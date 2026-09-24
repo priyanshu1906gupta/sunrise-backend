@@ -64,9 +64,14 @@ export function emitChatToTeachers(sessionId: string, message: LiveChatMessage):
   io?.to(teacherLiveRoom(sessionId)).emit("chat:message", message);
 }
 
+export type LiveAttendees = {
+  count: number;
+  names: string[];
+};
+
 type MediaRoom = {
   publisherId: string | null;
-  viewers: Set<string>;
+  viewers: Map<string, string>;
 };
 
 const mediaRooms = new Map<string, MediaRoom>();
@@ -74,21 +79,34 @@ const mediaRooms = new Map<string, MediaRoom>();
 function mediaRoom(sessionId: string): MediaRoom {
   let room = mediaRooms.get(sessionId);
   if (!room) {
-    room = { publisherId: null, viewers: new Set() };
+    room = { publisherId: null, viewers: new Map() };
     mediaRooms.set(sessionId, room);
   }
   return room;
 }
 
+export function attendeesOf(sessionId: string): LiveAttendees {
+  const room = mediaRooms.get(sessionId);
+  if (!room) return { count: 0, names: [] };
+  const names = [...room.viewers.values()];
+  return { count: names.length, names };
+}
+
+export function emitAttendees(sessionId: string): void {
+  io?.to(sessionLiveRoom(sessionId)).emit("live:attendees", attendeesOf(sessionId));
+}
+
 export function setPublisher(sessionId: string, socketId: string): string[] {
   const room = mediaRoom(sessionId);
   room.publisherId = socketId;
-  return [...room.viewers];
+  room.viewers.delete(socketId);
+  return [...room.viewers.keys()];
 }
 
-export function addViewer(sessionId: string, socketId: string): string | null {
+export function addViewer(sessionId: string, socketId: string, name?: string): string | null {
   const room = mediaRoom(sessionId);
-  room.viewers.add(socketId);
+  if (room.publisherId === socketId) return room.publisherId;
+  room.viewers.set(socketId, (name || "Student").trim() || "Student");
   return room.publisherId;
 }
 
@@ -108,6 +126,7 @@ export function removeMediaSocket(socketId: string): Array<{ sessionId: string; 
 
 export function wipeMedia(sessionId: string): void {
   mediaRooms.delete(sessionId);
+  emitAttendees(sessionId);
 }
 
 export function getIo(): Server | null {

@@ -465,5 +465,7 @@
   "live.startingCamera": "Starting camera…",
   "live.cameraError": "Could not open the camera. Allow camera and microphone, then try Go Live again.",
   "live.fullscreen": "Fullscreen",
-  "live.exitFullscreen": "Exit fullscreen"
+  "live.exitFullscreen": "Exit fullscreen",
+  "live.attending": "Attending",
+  "live.noAttendees": "Nobody is watching yet"
 }
