@@ -1,11 +1,11 @@
 {
-  "updatedAt": "2026-09-27T07:15:09.941Z",
+  "updatedAt": "2026-09-27T07:54:54.487Z",
   "android": {
     "available": true,
     "version": "1.0.0",
-    "versionCode": 4,
-    "size": 17935962,
-    "updatedAt": "2026-09-27T07:15:09.939Z",
+    "versionCode": 5,
+    "size": 17936254,
+    "updatedAt": "2026-09-27T07:54:54.486Z",
     "file": "android.apk"
   },
   "windows": {
